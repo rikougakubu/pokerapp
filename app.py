@@ -2,6 +2,15 @@ import streamlit as st
 from db import insert_record, fetch_all, db
 from firebase_admin import firestore
 
+
+st.subheader("📋 Firestore にあるすべてのキー確認")
+docs = db.collection("hands").stream()
+for doc in docs:
+    data = doc.to_dict()
+    st.write(data.keys())
+
+
+
 st.title("ポーカーハンド記録アプリ")
 st.subheader("ハンドを入力")
 game = st.text_input("ゲーム名を入力してください")
@@ -54,16 +63,18 @@ for doc in query:
         doc.reference.delete()
         st.experimental_rerun()
 
-# 修正：game フィールドが存在しない or 空文字のデータを削除
+
+
+
 if st.button("⚠️ 古い形式のデータを一括削除", type="primary"):
     st.warning("確認のためもう一度押してください。")
     if st.button("本当に古いデータを削除する（元に戻せません）"):
-        from firebase_admin import firestore
         docs = db.collection("hands").stream()
         deleted = 0
         for doc in docs:
             data = doc.to_dict()
-            if "game" not in data or not data["game"].strip():
+            # game キーがないか、空文字列だったら削除
+            if "game" not in data or data.get("game", "") == "":
                 doc.reference.delete()
                 deleted += 1
         st.success(f"古い形式のデータ {deleted} 件を削除しました。")
