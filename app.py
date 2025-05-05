@@ -9,27 +9,43 @@ st.title("スタッツ解析アプリ")
 st.subheader("🎮 ゲーム名とハンドの入力")
 game = st.text_input("ゲーム名（例：韓国1−3）")
 hand = st.text_input("ハンド（例: AsKs）")
-preflop = st.selectbox("プリフロップ", ["CC", "レイズ", "3bet", "3betコール", "4bet"])
-position = st.selectbox("ポジション", ["IP", "OOP"])
-flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
-turn = st.selectbox("ターンアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
-turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"], key="turn_type") if turn in ["ベット", "レイズ", "3bet"] else ""
-river = st.selectbox("リバーアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
-river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type") if river in ["ベット", "レイズ", "3bet"] else ""
-last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
+
+preflop_action = st.selectbox("プリフロップアクション", ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"])
+last_raiser = False
+position = ""
+flop = ""
+turn = ""
+river = ""
+turn_type = ""
+river_type = ""
+
+if preflop_action != "フォールド":
+    position = st.selectbox("ポジション", ["IP", "OOP"])
+    last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
+    flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+
+    if flop != "フォールド":
+        turn = st.selectbox("ターンアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+        if turn in ["ベット", "レイズ", "3bet"]:
+            turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"], key="turn_type")
+
+        if turn != "フォールド":
+            river = st.selectbox("リバーアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+            if river in ["ベット", "レイズ", "3bet"]:
+                river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type")
 
 if st.button("✅ ハンドを記録する"):
     record = {
         "game": game,
         "hand": hand,
-        "preflop": preflop,
+        "preflop": preflop_action,
         "position": position,
+        "last_raiser": last_raiser,
         "flop": flop,
         "turn": turn,
         "turn_type": turn_type,
         "river": river,
-        "river_type": river_type,
-        "last_raiser": last_raiser
+        "river_type": river_type
     }
     insert_record(record)
     st.success("ハンドを保存しました！")
@@ -60,23 +76,23 @@ for doc in query:
 st.subheader(f"📊 『{selected_game}』の統計")
 
 total = len(records)
-vpip = sum(1 for r in records if r["preflop"] != "3betコール")
-pfr = sum(1 for r in records if r["preflop"] in ["レイズ", "3bet", "4bet"])
-three_bet = sum(1 for r in records if r["preflop"] in ["3bet", "4bet"])
+vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
+pfr = sum(1 for r in records if r.get("preflop") in ["レイズ", "3bet", "4bet"])
+three_bet = sum(1 for r in records if r.get("preflop") in ["3bet", "4bet"])
 
-flop_cb_ip = sum(1 for r in records if r.get("last_raiser") and r["position"] == "IP" and r["flop"] == "ベット")
-flop_cb_oop = sum(1 for r in records if r.get("last_raiser") and r["position"] == "OOP" and r["flop"] == "ベット")
-flop_cb_ip_base = sum(1 for r in records if r.get("last_raiser") and r["position"] == "IP")
-flop_cb_oop_base = sum(1 for r in records if r.get("last_raiser") and r["position"] == "OOP")
+flop_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("flop") == "ベット")
+flop_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("flop") == "ベット")
+flop_cb_ip_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP")
+flop_cb_oop_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP")
 
-turn_bets = [r for r in records if r["turn"] in ["ベット", "レイズ", "3bet"]]
+turn_bets = [r for r in records if r.get("turn") in ["ベット", "レイズ", "3bet"]]
 turn_value = sum(1 for r in turn_bets if r.get("turn_type") == "バリュー")
 
-river_bets = [r for r in records if r["river"] in ["ベット", "レイズ", "3bet"]]
+river_bets = [r for r in records if r.get("river") in ["ベット", "レイズ", "3bet"]]
 river_value = sum(1 for r in river_bets if r.get("river_type") == "バリュー")
 
-check_raise = sum(1 for r in records if r["position"] == "OOP" and r["flop"] == "レイズ")
-faced_cb = sum(1 for r in records if r["position"] == "OOP" and r["flop"] in ["チェック", "コール", "レイズ", "フォールド"])
+check_raise = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") == "レイズ")
+faced_cb = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") in ["チェック", "コール", "レイズ", "フォールド"])
 
 if total == 0:
     st.info("このゲームの記録がまだありません。")
