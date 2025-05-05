@@ -6,9 +6,9 @@ st.title("スタッツ解析アプリ")
 # -------------------
 # ゲーム名とハンド入力
 # -------------------
-st.subheader("🎮 ゲーム名とハンドの入力")
+st.subheader("ゲーム名とハンドの入力")
 game = st.text_input("ゲーム名（例：韓国1−3）")
-hand = st.text_input("ハンド（例: AsKs）")
+hand = st.text_input("ハンド（例: 27o）")
 
 preflop_action = st.selectbox("プリフロップアクション", ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"])
 last_raiser = False
@@ -34,7 +34,7 @@ if preflop_action != "フォールド":
             if river in ["ベット", "レイズ", "3bet"]:
                 river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type")
 
-if st.button("✅ ハンドを記録する"):
+if st.button("ハンドを記録する"):
     record = {
         "game": game,
         "hand": hand,
@@ -53,19 +53,19 @@ if st.button("✅ ハンドを記録する"):
 # -------------------
 # ゲーム選択とデータ表示
 # -------------------
-st.subheader("📂 記録済みゲームの表示")
+st.subheader("記録済みゲームの表示")
 all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
 selected_game = st.selectbox("表示するゲームを選んでください", games)
 
 query = db.collection("hands").where("game", "==", selected_game).stream()
 records = []
-st.subheader(f"📝 『{selected_game}』のハンド一覧")
+st.subheader(f"『{selected_game}』のハンド一覧")
 for doc in query:
     r = doc.to_dict()
     records.append(r)
     st.write(r)
-    if st.button(f"🗑 このハンドを削除（{r['hand']}）", key=doc.id):
+    if st.button(f"このハンドを削除（{r['hand']}）", key=doc.id):
         doc.reference.delete()
         st.success("削除しました！")
         st.experimental_rerun()
@@ -73,7 +73,7 @@ for doc in query:
 # -------------------
 # スタッツ解析
 # -------------------
-st.subheader(f"📊 『{selected_game}』の統計")
+st.subheader(f"『{selected_game}』の統計")
 
 total = len(records)
 vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
@@ -105,3 +105,4 @@ else:
     st.markdown(f"- Turn バリュー率: {turn_value / len(turn_bets):.1%} ({turn_value}/{len(turn_bets)})" if turn_bets else "- Turn バリュー率: なし")
     st.markdown(f"- River バリュー率: {river_value / len(river_bets):.1%} ({river_value}/{len(river_bets)})" if river_bets else "- River バリュー率: なし")
     st.markdown(f"- フロップチェックレイズ率（OOP）: {check_raise / faced_cb:.1%} ({check_raise}/{faced_cb})" if faced_cb else "- フロップチェックレイズ率（OOP）: なし")
+
