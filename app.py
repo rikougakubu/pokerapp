@@ -57,13 +57,16 @@ for doc in query:
 
 
 
-if st.button("🗑 Firestoreの全データを削除（gameあり/なし問わず）", type="primary"):
-    st.warning("これはすべての記録を完全に削除します。もう一度押すと実行されます。")
-    if st.button("⚠️ 本当に全データを削除する（元に戻せません）"):
-        docs = db.collection("hands").stream()
-        count = 0
-        for doc in docs:
+st.subheader("🗑 古い形式のデータを削除（game フィールドなし or 空）")
+
+if st.button("⚠️ 古い記録を一括削除"):
+    docs = db.collection("hands").stream()
+    deleted = 0
+    for doc in docs:
+        data = doc.to_dict()
+        # game が存在しないか、空文字の場合に削除
+        if "game" not in data or data["game"].strip() == "":
             doc.reference.delete()
-            count += 1
-        st.success(f"すべてのハンド記録を {count} 件 削除しました。")
-        st.experimental_rerun()
+            deleted += 1
+    st.success(f"古い形式のデータを {deleted} 件 削除しました。")
+    st.experimental_rerun()
