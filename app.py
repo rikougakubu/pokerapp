@@ -1,37 +1,30 @@
 import streamlit as st
-import asyncio
-from db import insert_hand, fetch_all_hands, init_db
+from db import insert_record, fetch_all
 
-st.set_page_config(page_title="Poker Hand Logger", layout="centered")
+st.title("ポーカーハンド記録アプリ")
 
-async def main():
-    await init_db()
+st.subheader("ハンドを入力")
+hand = st.text_input("ハンド（例: AsKs）")
+preflop = st.selectbox("プリフロップ", ["CC", "レイズ", "3bet", "3betコール", "4bet"])
+position = st.selectbox("ポジション", ["IP", "OOP"])
+flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet"])
+turn = st.selectbox("ターンアクション", ["ベット", "チェック", "レイズ", "3bet"])
+river = st.selectbox("リバーアクション", ["ベット", "チェック", "レイズ", "3bet"])
 
-    st.title("🃏 ポーカー ハンド記録")
+if st.button("記録する"):
+    record = {
+        "hand": hand,
+        "preflop": preflop,
+        "position": position,
+        "flop": flop,
+        "turn": turn,
+        "river": river
+    }
+    insert_record(record)
+    st.success("保存しました！")
 
-    with st.form("hand_form"):
-        hand = st.text_input("ハンド（例: AsKs）")
-        preflop = st.selectbox("プリフロップアクション", ["CC", "レイズ", "3bet", "3betコール", "4bet"])
-        position = st.radio("ポジション", ["インポジション", "アウトオブポジション"])
-        flop = st.selectbox("フロップアクション", ["チェック", "ベット", "レイズ", "3bet"])
-        turn = st.selectbox("ターンアクション", ["チェック", "ベット", "レイズ", "3bet"])
-        river = st.selectbox("リバーアクション", ["チェック", "ベット", "レイズ", "3bet"])
-        submitted = st.form_submit_button("記録")
+st.subheader("保存されたデータ一覧")
+data = fetch_all()
+for r in data:
+    st.write(r)
 
-        if submitted:
-            await insert_hand({
-                "hand": hand,
-                "action_preflop": preflop,
-                "position": position,
-                "action_flop": flop,
-                "action_turn": turn,
-                "action_river": river
-            })
-            st.success("保存しました！")
-
-    st.subheader("📜 ハンド履歴")
-    rows = await fetch_all_hands()
-    for row in rows:
-        st.text(f"[{row.timestamp}] {row.hand} - {row.action_preflop}, {row.position}, {row.action_flop}, {row.action_turn}, {row.action_river}")
-
-asyncio.run(main())
