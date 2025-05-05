@@ -1,10 +1,11 @@
 import streamlit as st
-from db import insert_record, fetch_all, db  # ← db も追加！
+from db import insert_record, fetch_all, db
+from firebase_admin import firestore
 
 st.title("ポーカーハンド記録アプリ")
-
 st.subheader("ハンドを入力")
-hand = st.text_input("ハンド（例: AsKs）")
+game = st.text_input("ゲーム名を入力してください")
+hand = st.text_input("ハンド（例: AKs）")
 preflop = st.selectbox("プリフロップ", ["CC", "レイズ", "3bet", "3betコール", "4bet"])
 position = st.selectbox("ポジション", ["IP", "OOP"])
 flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet"])
@@ -23,6 +24,7 @@ else:
 
 if st.button("記録する"):
     record = {
+        "game": game,
         "hand": hand,
         "preflop": preflop,
         "position": position,
@@ -40,11 +42,14 @@ data = fetch_all()
 for r in data:
     st.write(r)
 
-# データ消去ボタン（Firestore全削除）
-if st.button("⚠️ ハンド記録をすべて削除", type="primary"):
-    st.warning("確認のためもう一度押してください。")
-    if st.button("本当に削除する（元に戻せません）"):
-        docs = db.collection("hands").stream()
-        for doc in docs:
-            doc.reference.delete()
-        st.success("すべてのハンド記録を削除しました。")
+
+# 指定ゲームのデータを取得
+query = db.collection("hands").where("game", "==", game).stream()
+
+st.subheader(f"『{game}』のハンド一覧")
+for doc in query:
+    r = doc.to_dict()
+    st.write(r)
+    if st.button(f"🗑 このハンドを削除（{r['hand']}）", key=doc.id):
+        doc.reference.delete()
+        st.experimental_rerun()
