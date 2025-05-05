@@ -6,9 +6,9 @@ st.title("ポーカーハンド記録アプリ")
 # -------------------
 # ゲーム名入力
 # -------------------
-st.subheader("📝 ゲーム名とハンドの入力")
+st.subheader("ゲーム名とハンドの入力")
 game = st.text_input("ゲーム名（例：韓国1−3）")
-hand = st.text_input("ハンド（例: AsKs）")
+hand = st.text_input("ハンド（例: 27o）")
 preflop = st.selectbox("プリフロップ", ["CC", "レイズ", "3bet", "3betコール", "4bet"])
 position = st.selectbox("ポジション", ["IP", "OOP"])
 flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet"])
@@ -23,7 +23,7 @@ river_type = ""
 if river in ["ベット", "3bet"]:
     river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type")
 
-if st.button("✅ ハンドを記録する"):
+if st.button("ハンドを記録する"):
     record = {
         "game": game,
         "hand": hand,
@@ -41,7 +41,7 @@ if st.button("✅ ハンドを記録する"):
 # -------------------
 # ゲーム名一覧の取得と選択
 # -------------------
-st.subheader("🎲 記録済みゲームの表示")
+st.subheader("記録済みゲームの表示")
 
 all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
@@ -55,21 +55,7 @@ st.subheader(f"『{selected_game}』のハンド一覧")
 for doc in query:
     r = doc.to_dict()
     st.write(r)
-    if st.button(f"🗑 このハンドを削除（{r['hand']}）", key=doc.id):
+    if st.button(f"このハンドを削除（{r['hand']}）", key=doc.id):
         doc.reference.delete()
         st.success("削除しました！")
         st.experimental_rerun()
-
-# -------------------
-# 古い形式データ削除（gameなし or 空）
-# -------------------
-st.subheader("🧹 古いデータの整理")
-if st.button("⚠️ 古い記録を一括削除"):
-    docs = db.collection("hands").stream()
-    deleted = 0
-    for doc in docs:
-        data = doc.to_dict()
-        if "game" not in data or data.get("game", "").strip() == "":
-            doc.reference.delete()
-            deleted += 1
-    st.success(f"古い形式のデータを {deleted} 件 削除しました。")
