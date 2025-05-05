@@ -53,20 +53,5 @@ for doc in query:
     st.write(r)
     if st.button(f"🗑 このハンドを削除（{r['hand']}）", key=doc.id):
         doc.reference.delete()
-        st.experimental_rerun()
+        #st.experimental_rerun()
 
-
-
-st.subheader("🗑 古い形式のデータを削除（game フィールドなし or 空）")
-
-if st.button("⚠️ 古い記録を一括削除"):
-    docs = db.collection("hands").stream()
-    deleted = 0
-    for doc in docs:
-        data = doc.to_dict()
-        # game が存在しないか、空文字の場合に削除
-        if "game" not in data or data["game"].strip() == "":
-            doc.reference.delete()
-            deleted += 1
-    st.success(f"古い形式のデータを {deleted} 件 削除しました。")
-    st.experimental_rerun()
