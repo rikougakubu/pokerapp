@@ -54,7 +54,7 @@ for doc in query:
         doc.reference.delete()
         st.experimental_rerun()
 
-# game フィールドが存在しないデータを削除
+# 修正：game フィールドが存在しない or 空文字のデータを削除
 if st.button("⚠️ 古い形式のデータを一括削除", type="primary"):
     st.warning("確認のためもう一度押してください。")
     if st.button("本当に古いデータを削除する（元に戻せません）"):
@@ -63,7 +63,7 @@ if st.button("⚠️ 古い形式のデータを一括削除", type="primary"):
         deleted = 0
         for doc in docs:
             data = doc.to_dict()
-            if "game" not in data:
+            if "game" not in data or not data["game"].strip():
                 doc.reference.delete()
                 deleted += 1
         st.success(f"古い形式のデータ {deleted} 件を削除しました。")
