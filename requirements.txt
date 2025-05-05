@@ -1,4 +1,4 @@
 streamlit
-pandas
-aiosqlite
+sqlalchemy[asyncio]
+asyncpg
 pydantic
