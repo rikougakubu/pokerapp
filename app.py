@@ -53,3 +53,17 @@ for doc in query:
     if st.button(f"🗑 このハンドを削除（{r['hand']}）", key=doc.id):
         doc.reference.delete()
         st.experimental_rerun()
+
+# game フィールドが存在しないデータを削除
+if st.button("⚠️ 古い形式のデータを一括削除", type="primary"):
+    st.warning("確認のためもう一度押してください。")
+    if st.button("本当に古いデータを削除する（元に戻せません）"):
+        from firebase_admin import firestore
+        docs = db.collection("hands").stream()
+        deleted = 0
+        for doc in docs:
+            data = doc.to_dict()
+            if "game" not in data:
+                doc.reference.delete()
+                deleted += 1
+        st.success(f"古い形式のデータ {deleted} 件を削除しました。")
