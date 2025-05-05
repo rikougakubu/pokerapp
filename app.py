@@ -1,7 +1,7 @@
 import streamlit as st
 from db import insert_record, fetch_all, db
 
-st.title("ポーカースタッツ解析アプリ")
+st.title("スタッツ解析アプリ")
 
 # -------------------
 # ゲーム名入力
