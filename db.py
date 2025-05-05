@@ -2,8 +2,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # Firebase認証（firebase-key.jsonはpoker_app内に配置）
-cred = credentials.Certificate("firebase-key.json")
-firebase_admin.initialize_app(cred)
+if not firebase_admin._apps:
+    cred = credentials.Certificate("firebase-key.json")
+    firebase_admin.initialize_app(cred)
 
 # Firestore クライアントの初期化
 db = firestore.client()
