@@ -53,9 +53,7 @@ if st.button("ハンドを記録する"):
     insert_record(record)
     st.success("ハンドを保存しました！")
 
-# -------------------
-# ゲーム選択とデータ表示・削除
-# -------------------
+# ------------------- ゲーム選択とデータ表示・削除 -------------------
 st.subheader("記録済みゲームの表示")
 all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
@@ -63,15 +61,19 @@ selected_game = st.selectbox("表示するゲームを選んでください", ga
 
 
 
-# ゲームごとの削除ボタン
-if st.button(f"⚠️『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
-    query = db.collection("hands").where("game", "==", selected_game).stream()
-    count = 0
-    for doc in query:
-        doc.reference.delete()
-        count += 1
-    st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
-    st.rerun()
+# 確認付きのゲームごと削除ボタン
+confirm_delete = st.button(f"⚠️ 『{selected_game}』のすべてのハンドを削除", type="secondary", use_container_width=True)
+
+if confirm_delete:
+    st.warning("本当に削除しますか？（元に戻せません）")
+    if st.button("削除する", type="secondary", use_container_width=True):
+        query = db.collection("hands").where("game", "==", selected_game).stream()
+        count = 0
+        for doc in query:
+            doc.reference.delete()
+            count += 1
+        st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
+        st.experimental_rerun()
 
 
 
