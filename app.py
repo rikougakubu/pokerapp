@@ -11,8 +11,6 @@ game = st.text_input("ゲーム名（例：韓国1−3）")
 hand = st.text_input("ハンド（例: 27o）")
 
 preflop_action = st.selectbox("プリフロップアクション", ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"])
-multiplayer_type = st.radio("ヘッズアップ or マルチウェイ", ["ヘッズアップ", "マルチウェイ"])
-
 last_raiser = False
 position = ""
 flop = ""
@@ -21,7 +19,7 @@ river = ""
 turn_type = ""
 river_type = ""
 
-if preflop_action != "フォールド" and multiplayer_type == "ヘッズアップ":
+if preflop_action != "フォールド":
     position = st.selectbox("ポジション", ["IP", "OOP"])
     last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
     flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
@@ -41,7 +39,6 @@ if st.button("ハンドを記録する"):
         "game": game,
         "hand": hand,
         "preflop": preflop_action,
-        "multiway": multiplayer_type,
         "position": position,
         "last_raiser": last_raiser,
         "flop": flop,
@@ -61,6 +58,17 @@ all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
 selected_game = st.selectbox("表示するゲームを選んでください", games)
 
+#ゲームごとの削除ボタン
+if st.button(f"『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
+    query = db.collection("hands").where("game", "==", selected_game).stream()
+    count = 0
+    for doc in query:
+        doc.reference.delete()
+        count += 1
+    st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
+    st.experimental_rerun()
+
+# 一覧表示
 query = db.collection("hands").where("game", "==", selected_game).stream()
 with st.expander(f"『{selected_game}』のハンド一覧を表示"):
     for doc in query:
@@ -89,33 +97,12 @@ flop_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position
 flop_cb_ip_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP")
 flop_cb_oop_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP")
 
-# Turn/River CB
-turn_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("turn") == "ベット")
-turn_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("turn") == "ベット")
-turn_cb_ip_base = flop_cb_ip_base
-turn_cb_oop_base = flop_cb_oop_base
-
-river_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("river") == "ベット")
-river_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("river") == "ベット")
-river_cb_ip_base = flop_cb_ip_base
-river_cb_oop_base = flop_cb_oop_base
-
-# Fold to Turn/River CB
-fold_to_turn_cb = sum(1 for r in records if not r.get("last_raiser") and r.get("turn") == "フォールド")
-fold_to_river_cb = sum(1 for r in records if not r.get("last_raiser") and r.get("river") == "フォールド")
-
-# WTSD%
-wtsd_base = sum(1 for r in records if r.get("flop") not in ["", "フォールド"])
-wtsd = sum(1 for r in records if r.get("flop") not in ["", "フォールド"] and r.get("river") not in ["フォールド", ""])
-
-# バリュー比率
 turn_bets = [r for r in records if r.get("turn") in ["ベット", "レイズ", "3bet"]]
 turn_value = sum(1 for r in turn_bets if r.get("turn_type") == "バリュー")
 
 river_bets = [r for r in records if r.get("river") in ["ベット", "レイズ", "3bet"]]
 river_value = sum(1 for r in river_bets if r.get("river_type") == "バリュー")
 
-# チェックレイズ率
 check_raise = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") == "レイズ")
 faced_cb = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") in ["チェック", "コール", "レイズ", "フォールド"])
 
@@ -127,13 +114,6 @@ else:
     st.markdown(f"- 3bet%: {three_bet / total:.1%} ({three_bet}/{total})")
     st.markdown(f"- Flop CB% (IP): {flop_cb_ip / flop_cb_ip_base:.1%} ({flop_cb_ip}/{flop_cb_ip_base})" if flop_cb_ip_base else "- Flop CB% (IP): なし")
     st.markdown(f"- Flop CB% (OOP): {flop_cb_oop / flop_cb_oop_base:.1%} ({flop_cb_oop}/{flop_cb_oop_base})" if flop_cb_oop_base else "- Flop CB% (OOP): なし")
-    st.markdown(f"- Turn CB% (IP): {turn_cb_ip / turn_cb_ip_base:.1%} ({turn_cb_ip}/{turn_cb_ip_base})" if turn_cb_ip_base else "- Turn CB% (IP): なし")
-    st.markdown(f"- Turn CB% (OOP): {turn_cb_oop / turn_cb_oop_base:.1%} ({turn_cb_oop}/{turn_cb_oop_base})" if turn_cb_oop_base else "- Turn CB% (OOP): なし")
-    st.markdown(f"- River CB% (IP): {river_cb_ip / river_cb_ip_base:.1%} ({river_cb_ip}/{river_cb_ip_base})" if river_cb_ip_base else "- River CB% (IP): なし")
-    st.markdown(f"- River CB% (OOP): {river_cb_oop / river_cb_oop_base:.1%} ({river_cb_oop}/{river_cb_oop_base})" if river_cb_oop_base else "- River CB% (OOP): なし")
-    st.markdown(f"- Fold to Turn CB%: {fold_to_turn_cb / total:.1%} ({fold_to_turn_cb}/{total})")
-    st.markdown(f"- Fold to River CB%: {fold_to_river_cb / total:.1%} ({fold_to_river_cb}/{total})")
-    st.markdown(f"- WTSD%: {wtsd / wtsd_base:.1%} ({wtsd}/{wtsd_base})" if wtsd_base else "- WTSD%: なし")
     st.markdown(f"- Turn バリュー率: {turn_value / len(turn_bets):.1%} ({turn_value}/{len(turn_bets)})" if turn_bets else "- Turn バリュー率: なし")
     st.markdown(f"- River バリュー率: {river_value / len(river_bets):.1%} ({river_value}/{len(river_bets)})" if river_bets else "- River バリュー率: なし")
     st.markdown(f"- フロップチェックレイズ率（OOP）: {check_raise / faced_cb:.1%} ({check_raise}/{faced_cb})" if faced_cb else "- フロップチェックレイズ率（OOP）: なし")
