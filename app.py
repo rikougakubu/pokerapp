@@ -59,16 +59,15 @@ games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
 selected_game = st.selectbox("表示するゲームを選んでください", games)
 
 query = db.collection("hands").where("game", "==", selected_game).stream()
-records = []
-st.subheader(f"『{selected_game}』のハンド一覧")
-for doc in query:
-    r = doc.to_dict()
-    records.append(r)
-    st.write(r)
-    if st.button(f"このハンドを削除（{r['hand']}）", key=doc.id):
-        doc.reference.delete()
-        st.success("削除しました！")
-        st.experimental_rerun()
+with st.expander(f"『{selected_game}』のハンド一覧を表示"):
+    for doc in query:
+        r = doc.to_dict()
+        st.write(r)
+        if st.button(f"このハンドを削除（{r['hand']}）", key=doc.id):
+            doc.reference.delete()
+            st.success("削除しました！")
+            st.experimental_rerun()
+
 
 # -------------------
 # スタッツ解析
