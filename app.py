@@ -69,6 +69,11 @@ with st.expander(f"『{selected_game}』のハンド一覧を表示"):
             st.experimental_rerun()
 
 
+query = db.collection("hands").where("game", "==", selected_game).stream()
+records = [doc.to_dict() for doc in query]
+
+
+
 # -------------------
 # スタッツ解析
 # -------------------
