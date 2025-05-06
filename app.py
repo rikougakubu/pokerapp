@@ -63,17 +63,15 @@ selected_game = st.selectbox("表示するゲームを選んでください", ga
 
 
 
-#ゲームごとの削除ボタン
-if st.button(f"『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
-    confirm = st.checkbox("本当に削除しますか？")
-    if confirm:
-        query = db.collection("hands").where("game", "==", selected_game).stream()
-        count = 0
-        for doc in query:
-            doc.reference.delete()
-            count += 1
-        st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
-        st.rerun()
+# ゲームごとの削除ボタン
+if st.button(f"⚠️『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
+    query = db.collection("hands").where("game", "==", selected_game).stream()
+    count = 0
+    for doc in query:
+        doc.reference.delete()
+        count += 1
+    st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
+    st.experimental_rerun()
 
 
 
