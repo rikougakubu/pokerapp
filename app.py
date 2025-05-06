@@ -15,24 +15,24 @@ multiplayer_type = st.radio("ヘッズアップ or マルチウェイ", ["ヘッ
 
 last_raiser = False
 position = ""
-flop = ""
-turn = ""
-river = ""
+flop = "なし"
+turn = "なし"
+river = "なし"
 turn_type = ""
 river_type = ""
 
 if preflop_action != "フォールド" and multiplayer_type == "ヘッズアップ":
     position = st.selectbox("ポジション", ["IP", "OOP"])
     last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
-    flop = st.selectbox("フロップアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+    flop = st.selectbox("フロップアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
 
     if flop != "フォールド":
-        turn = st.selectbox("ターンアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+        turn = st.selectbox("ターンアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
         if turn in ["ベット", "レイズ", "3bet"]:
             turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"], key="turn_type")
 
         if turn != "フォールド":
-            river = st.selectbox("リバーアクション", ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+            river = st.selectbox("リバーアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
             if river in ["ベット", "レイズ", "3bet"]:
                 river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type")
 
@@ -59,13 +59,11 @@ all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
 selected_game = st.selectbox("表示するゲームを選んでください", games)
 
-
-
 # 確認付きのゲームごと削除ボタン
 confirm_delete = st.button(f"⚠️ 『{selected_game}』のすべてのハンドを削除", type="secondary", use_container_width=True)
 confirm = st.checkbox("本当に削除しますか？")
 if confirm_delete and confirm:
-    docs = db.collection("hands").where("game", "==", selected_game).stream()     
+    docs = db.collection("hands").where("game", "==", selected_game).stream()
     count = 0
     for doc in docs:
         doc.reference.delete()
@@ -132,6 +130,19 @@ river_value = sum(1 for r in river_bets if r.get("river_type") == "バリュー"
 check_raise = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") == "レイズ")
 faced_cb = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") in ["チェック", "コール", "レイズ", "フォールド"])
 
+# 追加統計
+turn_bet_after_flop_call_base = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["チェック", "ベット", "3bet"])
+turn_bet_after_flop_call = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["ベット", "3bet"])
+
+turn_call_raise_after_flop_call_base = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ", "フォールド"])
+turn_call_raise_after_flop_call = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ"])
+
+river_bet_after_turn_call_base = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["チェック", "ベット", "3bet"])
+river_bet_after_turn_call = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["ベット", "3bet"])
+
+river_call_raise_after_turn_call_base = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["コール", "レイズ", "フォールド"])
+river_call_raise_after_turn_call = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["コール", "レイズ"])
+
 if total == 0:
     st.info("このゲームの記録がまだありません。")
 else:
@@ -150,3 +161,7 @@ else:
     st.markdown(f"- Turn バリュー率: {turn_value / len(turn_bets):.1%} ({turn_value}/{len(turn_bets)})" if turn_bets else "- Turn バリュー率: なし")
     st.markdown(f"- River バリュー率: {river_value / len(river_bets):.1%} ({river_value}/{len(river_bets)})" if river_bets else "- River バリュー率: なし")
     st.markdown(f"- フロップチェックレイズ率（OOP）: {check_raise / faced_cb:.1%} ({check_raise}/{faced_cb})" if faced_cb else "- フロップチェックレイズ率（OOP）: なし")
+    st.markdown(f"- フロップコール→ターンCB率: {turn_bet_after_flop_call / turn_bet_after_flop_call_base:.1%} ({turn_bet_after_flop_call}/{turn_bet_after_flop_call_base})" if turn_bet_after_flop_call_base else "- フロップコール→ターンCB率: なし")
+    st.markdown(f"- フロップコール→ターンコール/レイズ率: {turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base:.1%} ({turn_call_raise_after_flop_call}/{turn_call_raise_after_flop_call_base})" if turn_call_raise_after_flop_call_base else "- フロップコール→ターンコール/レイズ率: なし")
+    st.markdown(f"- ターンコール→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
+    st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
