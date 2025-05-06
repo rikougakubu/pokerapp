@@ -65,8 +65,8 @@ selected_game = st.selectbox("表示するゲームを選んでください", ga
 confirm_delete = st.button(f"⚠️ 『{selected_game}』のすべてのハンドを削除", type="secondary", use_container_width=True)
 
 if confirm_delete:
-    #st.warning("本当に削除しますか？（元に戻せません）")
-if st.button(f"⚠️ハンドを削除, type="primary"):
+    #st.warning("本当に削除しますか？（元に戻せません）")if st.button(f"⚠️ハンドを削除, type="primary"):
+if st.button(f"⚠️『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
     docs = db.collection("hands").where("game", "==", selected_game).stream()
     count = 0
     for doc in docs:
