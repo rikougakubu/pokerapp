@@ -66,14 +66,14 @@ confirm_delete = st.button(f"⚠️ 『{selected_game}』のすべてのハン�
 
 if confirm_delete:
     st.warning("本当に削除しますか？（元に戻せません）")
-    if st.button(f"✅ 『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
-        docs = db.collection("hands").where("game", "==", selected_game).stream()
-        count = 0
-        for doc in docs:
-            doc.reference.delete()
-            count += 1
-        st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
-        st.experimental_rerun()
+if st.button(f"✅ 『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
+    docs = db.collection("hands").where("game", "==", selected_game).stream()
+    count = 0
+    for doc in docs:
+        doc.reference.delete()  
+        count += 1
+    st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
+    st.rerun()
 
 
 # 一覧と個別削除
