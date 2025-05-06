@@ -131,13 +131,13 @@ check_raise = sum(1 for r in records if r.get("position") == "OOP" and r.get("fl
 faced_cb = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") in ["チェック", "コール", "レイズ", "フォールド"])
 
 # 追加統計
-turn_bet_after_flop_call_base = sum(1 for r in records if r.get("flop") == "ベット" and r.get("turn") in ["チェック", "ベット", "3bet"])
+turn_bet_after_flop_call_base = sum(1 for r in records if r.get("flop") == "ベット" and r.get("turn") in ["チェック", "フォールド", "ベット", "3bet"])
 turn_bet_after_flop_call = sum(1 for r in records if r.get("flop") == "ベット" and r.get("turn") in ["ベット", "3bet"])
 
 turn_call_raise_after_flop_call_base = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ", "フォールド"])
 turn_call_raise_after_flop_call = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ"])
 
-river_bet_after_turn_call_base = sum(1 for r in records if r.get("turn") == "ベット" and r.get("river") in ["チェック", "ベット", "3bet"])
+river_bet_after_turn_call_base = sum(1 for r in records if r.get("turn") == "ベット" and r.get("river") in ["チェック", "フォールド", "ベット", "3bet"])
 river_bet_after_turn_call = sum(1 for r in records if r.get("turn") == "ベット" and r.get("river") in ["ベット", "3bet"])
 
 river_call_raise_after_turn_call_base = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["コール", "レイズ", "フォールド"])
