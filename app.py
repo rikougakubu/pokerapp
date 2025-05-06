@@ -61,14 +61,19 @@ all_docs = db.collection("hands").stream()
 games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
 selected_game = st.selectbox("表示するゲームを選んでください", games)
 
-# 一括削除ボタン
-if st.button("⚠️ 選択中のゲームのすべてのハンドを削除", type="primary"):
-    if st.button("本当に削除しますか？（元に戻せません）", type="secondary"):
-        docs = db.collection("hands").where("game", "==", selected_game).stream()
-        for doc in docs:
-            doc.reference.delete()
-        st.success(f"『{selected_game}』のハンドをすべて削除しました。")
-        st.experimental_rerun()
+
+
+# ✅ ゲームごとの削除ボタン
+if st.button(f"⚠️『{selected_game}』のすべてのハンドを削除（元に戻せません）", type="primary"):
+    query = db.collection("hands").where("game", "==", selected_game).stream()
+    count = 0
+    for doc in query:
+        doc.reference.delete()
+        count += 1
+    st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
+    st.experimental_rerun()
+
+
 
 # 一覧と個別削除
 query = db.collection("hands").where("game", "==", selected_game).stream()
