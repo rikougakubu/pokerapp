@@ -71,7 +71,7 @@ if st.button(f"⚠️『{selected_game}』のすべてのハンドを削除（�
         doc.reference.delete()
         count += 1
     st.success(f"『{selected_game}』のハンドを {count} 件 削除しました。")
-    st.experimental_rerun()
+    st.rerun()
 
 
 
