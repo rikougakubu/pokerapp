@@ -7,10 +7,8 @@ st.title("スタッツ解析アプリ")
 # 共通：Firestore からゲーム名リストを取得
 # =========================================
 all_docs = db.collection("hands").stream()
-all_games = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs})  # set で重複排除
+all_games = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs})
 
-# Streamlit では同じ値の selectbox が複数あると警告が出るため、
-# キーを付けて管理する
 GAME_NEW_LABEL = "＋ 新規ゲームを追加"
 
 # -------------------
@@ -18,7 +16,6 @@ GAME_NEW_LABEL = "＋ 新規ゲームを追加"
 # -------------------
 st.subheader("ゲーム名とハンドの入力")
 
-# 既存ゲームを選択 or 新規作成を選択
 initial_options = [GAME_NEW_LABEL] + all_games if all_games else [GAME_NEW_LABEL]
 
 selected_option = st.selectbox(
@@ -27,11 +24,10 @@ selected_option = st.selectbox(
     key="game_select_input",
 )
 
-# 新規の場合のみテキスト入力を表示
 if selected_option == GAME_NEW_LABEL:
     game = st.text_input("新しいゲーム名を入力", key="new_game_input")
 else:
-    game = selected_option  # 既存ゲーム名をそのまま使用
+    game = selected_option
 
 hand = st.text_input("ハンド（例: 27o）")
 
@@ -89,16 +85,20 @@ if st.button("ハンドを記録する"):
         }
         insert_record(record)
         st.success("ハンドを保存しました！")
-        st.rerun()  # 保存後にゲームリストを即座に更新
+        st.rerun()
 
 # ------------------- ゲーム選択とデータ表示・削除 -------------------
 st.subheader("記録済みゲームの表示")
-# 最新のゲームリストを再取得（上部で再読み込みしている可能性があるため）
+
 all_docs_display = db.collection("hands").stream()
 all_games_display = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs_display})
 selected_game = st.selectbox("表示するゲームを選んでください", all_games_display, key="game_select_view")
 
-# 確認付きのゲームごと削除ボタン
+# 選択ゲームのドキュメントを取得してリスト化（後で繰り返し利用するため）
+docs_for_game = list(db.collection("hands").where("game", "==", selected_game).stream())
+records = [doc.to_dict() for doc in docs_for_game]
+
+# ゲームまとめ削除
 confirm_delete = st.button(
     f"⚠️ 『{selected_game}』のすべてのハンドを削除",
     type="secondary",
@@ -106,25 +106,20 @@ confirm_delete = st.button(
 )
 confirm = st.checkbox("本当に削除しますか？")
 if confirm_delete and confirm:
-    docs = db.collection("hands").where("game", "==", selected_game).stream()
-    count = 0
-    for doc in docs:
+    for doc in docs_for_game:
         doc.reference.delete()
-        count += 1
-    st.success(f"{count} 件のハンドを削除しました！")
+    st.success(f"{len(docs_for_game)} 件のハンドを削除しました！")
     st.rerun()
 
 # 一覧と個別削除
-query = db.collection("hands").where("game", "==", selected_game).stream()
 with st.expander(f"『{selected_game}』のハンド一覧を表示"):
-    for doc in query:
+    for doc in docs_for_game:
         r = doc.to_dict()
         st.write(r)
         if st.button(f"このハンドを削除（{r['hand']}）", key=doc.id):
             doc.reference.delete()
             st.success("削除しました！")
             st.experimental_rerun()
-
 
 # -------------------
 # スタッツ解析
