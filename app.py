@@ -19,7 +19,27 @@ if selected_game_opt == GAME_NEW:
 else:
     game = selected_game_opt
 
-hand = st.text_input("ハンド（例: 27o）", key="hand_input")
+
+#hand = st.text_input("ハンド（例: 27o）", key="hand_input")
+
+
+# ② 代わりに下を挿入  ------------------------------- ▼
+ranks = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"]
+hand_options = []
+
+for i, r1 in enumerate(ranks):
+    for j, r2 in enumerate(ranks):
+        if i == j:          # ペア（AA, KK …）
+            hand_options.append(r1 + r2)
+        elif i < j:         # 右上三角：suited
+            hand_options.append(r1 + r2 + "s")
+        else:               # 左下三角：offsuit
+            hand_options.append(r2 + r1 + "o")
+
+hand = st.selectbox("ハンドを選択", hand_options, key="hand_select")
+
+
+
 preflop_action = st.selectbox(
     "プリフロップアクション",
     ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"],
