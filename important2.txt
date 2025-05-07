@@ -1,0 +1,8 @@
+起動（初回/再起動）	tmux new -s pokerapp → ./start_app.sh
+接続し直す（再接続）	tmux attach -t pokerapp
+終了したいとき	Ctrl + C → exit（または tmux kill-session -t pokerapp）
+スマホでアクセス	https://pokerapp-urip.loca.lt に接続 → パスワード入力
+
+131.113.97.12
+
+https://pokerapp-urip.loca.lt

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# 開始ログ
+echo "[start_app.sh] 開始: $(date)" >> /home/kazu20040127/poker_app/cron_debug.log01~echo "[start_app.sh] 開始: $(date)" >> /home/kazu20040127/poker_app/cron_debug.log
+
+# 強制終了（競合防止）
+pkill -f "streamlit"
+pkill -f "npx localtunnel"
+
+# 一瞬待つ
+sleep 2
+
+# プロジェクトディレクトリへ移動
+cd /home/kazu20040127/poker_app
+
+# 古いログを削除
+rm -f lt_url.txt lt_pass.txt streamlit.log
+
+# Streamlit アプリをバックグラウンドで起動（ログを保存）
+~/.local/bin/streamlit run app.py --server.port 8501 > streamlit.log 2>&1 &
+
+# 少し待機（Streamlitの起動待ち）
+sleep 15
+
+# fixed subdomain（希望の名前に変更OK）
+SUBDOMAIN="pokerapp-urip"
+
+# localtunnelを起動（ログとパスワード保存）
+nohup npx localtunnel --port 8501 --subdomain $SUBDOMAIN > lt_url.txt 2>&1 &
+
+# パスワードを保存（外部公開のとき必要）
+sleep 3
+curl -s https://loca.lt/mytunnelpassword > lt_pass.txt
+
+
+# 終了ログ
+echo "[start_app.sh] 終了: $(date)" >> /home/kazu20040127/poker_app/cron_debug.log
+
+# 確認表示
+echo "Streamlit started"
+echo "URL:"
+grep "https://" lt_url.txt | tee /dev/tty
+echo "Password:"
+cat lt_pass.txt
