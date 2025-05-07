@@ -3,14 +3,41 @@ from db import insert_record, fetch_all, db
 
 st.title("スタッツ解析アプリ")
 
+# =========================================
+# 共通：Firestore からゲーム名リストを取得
+# =========================================
+all_docs = db.collection("hands").stream()
+all_games = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs})  # set で重複排除
+
+# Streamlit では同じ値の selectbox が複数あると警告が出るため、
+# キーを付けて管理する
+GAME_NEW_LABEL = "＋ 新規ゲームを追加"
+
 # -------------------
 # ゲーム名とハンド入力
 # -------------------
 st.subheader("ゲーム名とハンドの入力")
-game = st.text_input("ゲーム名（例：韓国1−3）")
+
+# 既存ゲームを選択 or 新規作成を選択
+initial_options = [GAME_NEW_LABEL] + all_games if all_games else [GAME_NEW_LABEL]
+
+selected_option = st.selectbox(
+    "ゲームを選択（新規作成は '＋ 新規ゲームを追加'）",
+    initial_options,
+    key="game_select_input",
+)
+
+# 新規の場合のみテキスト入力を表示
+if selected_option == GAME_NEW_LABEL:
+    game = st.text_input("新しいゲーム名を入力", key="new_game_input")
+else:
+    game = selected_option  # 既存ゲーム名をそのまま使用
+
 hand = st.text_input("ハンド（例: 27o）")
 
-preflop_action = st.selectbox("プリフロップアクション", ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"])
+preflop_action = st.selectbox("プリフロップアクション", [
+    "フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"
+])
 multiplayer_type = st.radio("ヘッズアップ or マルチウェイ", ["ヘッズアップ", "マルチウェイ"])
 
 last_raiser = False
@@ -24,43 +51,59 @@ river_type = ""
 if preflop_action != "フォールド" and multiplayer_type == "ヘッズアップ":
     position = st.selectbox("ポジション", ["IP", "OOP"])
     last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
-    flop = st.selectbox("フロップアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+    flop = st.selectbox("フロップアクション", [
+        "なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"
+    ])
 
     if flop != "フォールド":
-        turn = st.selectbox("ターンアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+        turn = st.selectbox("ターンアクション", [
+            "なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"
+        ])
         if turn in ["ベット", "レイズ", "3bet"]:
             turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"], key="turn_type")
 
         if turn != "フォールド":
-            river = st.selectbox("リバーアクション", ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+            river = st.selectbox("リバーアクション", [
+                "なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"
+            ])
             if river in ["ベット", "レイズ", "3bet"]:
                 river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"], key="river_type")
 
+# ------------------- ハンドを Firestore に保存 -------------------
 if st.button("ハンドを記録する"):
-    record = {
-        "game": game,
-        "hand": hand,
-        "preflop": preflop_action,
-        "multiway": multiplayer_type,
-        "position": position,
-        "last_raiser": last_raiser,
-        "flop": flop,
-        "turn": turn,
-        "turn_type": turn_type,
-        "river": river,
-        "river_type": river_type
-    }
-    insert_record(record)
-    st.success("ハンドを保存しました！")
+    if not game:
+        st.error("ゲーム名を入力してください！")
+    else:
+        record = {
+            "game": game,
+            "hand": hand,
+            "preflop": preflop_action,
+            "multiway": multiplayer_type,
+            "position": position,
+            "last_raiser": last_raiser,
+            "flop": flop,
+            "turn": turn,
+            "turn_type": turn_type,
+            "river": river,
+            "river_type": river_type,
+        }
+        insert_record(record)
+        st.success("ハンドを保存しました！")
+        st.rerun()  # 保存後にゲームリストを即座に更新
 
 # ------------------- ゲーム選択とデータ表示・削除 -------------------
 st.subheader("記録済みゲームの表示")
-all_docs = db.collection("hands").stream()
-games = sorted(set(doc.to_dict().get("game", "未分類") for doc in all_docs))
-selected_game = st.selectbox("表示するゲームを選んでください", games)
+# 最新のゲームリストを再取得（上部で再読み込みしている可能性があるため）
+all_docs_display = db.collection("hands").stream()
+all_games_display = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs_display})
+selected_game = st.selectbox("表示するゲームを選んでください", all_games_display, key="game_select_view")
 
 # 確認付きのゲームごと削除ボタン
-confirm_delete = st.button(f"⚠️ 『{selected_game}』のすべてのハンドを削除", type="secondary", use_container_width=True)
+confirm_delete = st.button(
+    f"⚠️ 『{selected_game}』のすべてのハンドを削除",
+    type="secondary",
+    use_container_width=True,
+)
 confirm = st.checkbox("本当に削除しますか？")
 if confirm_delete and confirm:
     docs = db.collection("hands").where("game", "==", selected_game).stream()
@@ -82,8 +125,6 @@ with st.expander(f"『{selected_game}』のハンド一覧を表示"):
             st.success("削除しました！")
             st.experimental_rerun()
 
-query = db.collection("hands").where("game", "==", selected_game).stream()
-records = [doc.to_dict() for doc in query]
 
 # -------------------
 # スタッツ解析
