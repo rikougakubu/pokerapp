@@ -2,3 +2,4 @@ streamlit
 sqlalchemy[asyncio]
 asyncpg
 pydantic
+firebase-admin
