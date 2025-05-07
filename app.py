@@ -104,7 +104,7 @@ if del_all and confirm_all:
     for d in docs_for_game:
         d.reference.delete()
     st.success(f"{len(docs_for_game)} 件のハンドを削除しました！")
-    st.experimental_rerun()
+    st.rerun()
 
 # 個別削除 & 一覧
 with st.expander(f"『{selected_game}』のハンド一覧({len(records)}件)"):
@@ -114,7 +114,7 @@ with st.expander(f"『{selected_game}』のハンド一覧({len(records)}件)"):
         if st.button(f"このハンドを削除（{r['hand']}）", key=f"del_{d.id}"):
             d.reference.delete()
             st.success("削除しました！")
-            st.experimental_rerun()
+            st.rerun()
 
 ###########################################################################
 # 3. スタッツ解析 ────────────────────────────────────────────
