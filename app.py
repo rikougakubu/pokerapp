@@ -1,15 +1,18 @@
 import streamlit as st
 from db import insert_record, db
+from google.cloud import firestore  # Firestore サーバータイムスタンプ用
 
 st.title("スタッツ解析アプリ")
 
 ###########################################################################
 # 1. ゲーム入力フォーム ───────────────────────────────────────────
 ###########################################################################
-# Firestore からゲーム名を取得
-all_games = sorted({doc.to_dict().get("game", "未分類") for doc in db.collection("hands").stream()})
+
+# Firestore からゲーム名を取得し、重複を排除したうえで並べ替え
+all_docs_initial = db.collection("hands").stream()
+all_games_initial = sorted({doc.to_dict().get("game", "未分類") for doc in all_docs_initial})
 GAME_NEW = "＋ 新規ゲームを追加"
-options = [GAME_NEW] + all_games if all_games else [GAME_NEW]
+options = [GAME_NEW] + all_games_initial if all_games_initial else [GAME_NEW]
 
 with st.form("hand-entry", clear_on_submit=False):
     st.subheader("ゲーム名とハンドの入力")
@@ -19,7 +22,7 @@ with st.form("hand-entry", clear_on_submit=False):
     if game_select == GAME_NEW:
         game = st.text_input("新しいゲーム名を入力", key="game_input")
     else:
-        game = game_select
+        game = game_select  # 既存ゲーム名
 
     hand = st.text_input("ハンド（例: 27o）", key="hand_input")
     preflop_action = st.selectbox("プリフロップアクション", [
@@ -78,19 +81,27 @@ if submitted:
             "turn_type": turn_type,
             "river": river,
             "river_type": river_type,
+            # 更新順ソート用タイムスタンプ
+            "timestamp": firestore.SERVER_TIMESTAMP,
         })
         st.success("ハンドを保存しました！")
-        st.rerun()  # UI を即更新
+        st.experimental_rerun()  # 即 UI 更新
 
 ###########################################################################
 # 2. 記録済みゲームの一覧と削除 ───────────────────────────────
 ###########################################################################
 
 st.subheader("記録済みゲームの表示")
-all_games = sorted({doc.to_dict().get("game", "未分類") for doc in db.collection("hands").stream()})
-selected_game = st.selectbox("表示するゲームを選んでください", all_games, key="view_game_select")
 
-docs_for_game = list(db.collection("hands").where("game", "==", selected_game).stream())
+# 直近に更新したゲームが先頭になるように、タイムスタンプで降順ソート
+all_docs = list(db.collection("hands").order_by("timestamp", direction="DESCENDING").stream())
+# OrderedDict で重複排除しつつ順序保持
+from collections import OrderedDict
+ordered_games = list(OrderedDict((doc.to_dict().get("game", "未分類"), None) for doc in all_docs).keys())
+
+selected_game = st.selectbox("表示するゲームを選んでください", ordered_games, key="view_game_select")
+
+docs_for_game = [d for d in all_docs if d.to_dict().get("game") == selected_game]
 records = [d.to_dict() for d in docs_for_game]
 
 # ゲーム丸ごと削除
@@ -104,7 +115,7 @@ if del_all and confirm_all:
     for d in docs_for_game:
         d.reference.delete()
     st.success(f"{len(docs_for_game)} 件のハンドを削除しました！")
-    st.rerun()
+    st.experimental_rerun()
 
 # 個別削除 & 一覧
 with st.expander(f"『{selected_game}』のハンド一覧({len(records)}件)"):
@@ -114,7 +125,7 @@ with st.expander(f"『{selected_game}』のハンド一覧({len(records)}件)"):
         if st.button(f"このハンドを削除（{r['hand']}）", key=f"del_{d.id}"):
             d.reference.delete()
             st.success("削除しました！")
-            st.rerun()
+            st.experimental_rerun()
 
 ###########################################################################
 # 3. スタッツ解析 ────────────────────────────────────────────
@@ -155,6 +166,4 @@ river_cb_oop_base = flop_cb_oop_base
 st.markdown(f"- **Flop CB% (IP)**: {flop_cb_ip/flop_cb_ip_base:.1%} ({flop_cb_ip}/{flop_cb_ip_base})" if flop_cb_ip_base else "- **Flop CB% (IP)**: なし")
 st.markdown(f"- **Flop CB% (OOP)**: {flop_cb_oop/flop_cb_oop_base:.1%} ({flop_cb_oop}/{flop_cb_oop_base})" if flop_cb_oop_base else "- **Flop CB% (OOP)**: なし")
 st.markdown(f"- **Turn CB% (IP)**: {turn_cb_ip/turn_cb_ip_base:.1%} ({turn_cb_ip}/{turn_cb_ip_base})" if turn_cb_ip_base else "- **Turn CB% (IP)**: なし")
-st.markdown(f"- **Turn CB% (OOP)**: {turn_cb_oop/turn_cb_oop_base:.1%} ({turn_cb_oop}/{turn_cb_oop_base})" if turn_cb_oop_base else "- **Turn CB% (OOP)**: なし")
-st.markdown(f"- **River CB% (IP)**: {river_cb_ip/river_cb_ip_base:.1%} ({river_cb_ip}/{river_cb_ip_base})" if river_cb_ip_base else "- **River CB% (IP)**: なし")
-st.markdown(f"- **River CB% (OOP)**: {river_cb_oop/river_cb_oop_base:.1%} ({river_cb_oop}/{river_cb_oop_base})" if river_cb_oop_base else "- **River CB% (OOP)**: なし")
+st.markdown(f"- **Turn CB% (OOP)**: {turn_cb_oop/turn_cb_oop_base:.1%} ({turn_cb_oop}/{turn_cb_oop
