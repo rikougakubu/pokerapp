@@ -86,7 +86,7 @@ if st.button("ハンドを記録する"):
             "timestamp": firestore.SERVER_TIMESTAMP,
         })
         st.success("ハンドを保存しました！")
-        st.experimental_rerun()
+        st.rerun()
 
 ###########################################################################
 # 2. 記録済みゲームの表示・削除
@@ -111,7 +111,7 @@ if btn_del_all and confirm_all:
     for d in docs_view:
         d.reference.delete()
     st.success(f"{len(docs_view)} 件のハンドを削除しました！")
-    st.experimental_rerun()
+    st.rerun()
 
 with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
     for d in docs_view:
@@ -120,7 +120,7 @@ with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
         if st.button(f"このハンドを削除（{rec['hand']}）", key=f"del_{d.id}"):
             d.reference.delete()
             st.success("削除しました！")
-            st.experimental_rerun()
+            st.rerun()
 
 # -------------------
 # スタッツ解析
