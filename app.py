@@ -125,8 +125,7 @@ with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
 # -------------------
 # スタッツ解析
 # -------------------
-st.subheader(f"『{selected_game}』の統計")
-
+st.subheader(f"『{view_game}』の統計")
 total = len(records)
 vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
 pfr = sum(1 for r in records if r.get("preflop") in ["レイズ", "3bet", "4bet"])
