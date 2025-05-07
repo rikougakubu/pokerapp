@@ -126,38 +126,47 @@ with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
 # 3. スタッツ解析
 ###########################################################################
 
-st.subheader(f"『{view_game}』の統計")
+# 3. スタッツ解析 ────────────────────────────────────────────
+
+\###########################################################################
+
+st.subheader(f"『{selected\_game}』の統計")
 
 total = len(records)
 if total == 0:
-    st.info("このゲームの記録がまだありません。")
-    st.stop()
+st.info("このゲームの記録がまだありません。")
+st.stop()
 
-vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
-pfr = sum(1 for r in records if r.get("preflop") in ["レイズ", "3bet", "4bet"])
-three_bet = sum(1 for r in records if r.get("preflop") in ["3bet", "4bet"])
+# ---------- プリフロップ ----------
+
+vpip = sum(1 for r in records if r\["preflop"] not in \["フォールド", ""])
+pfr = sum(1 for r in records if r\["preflop"] in \["レイズ", "3bet", "4bet"])
+three\_bet = sum(1 for r in records if r\["preflop"] in \["3bet", "4bet"])
 
 st.markdown(f"- **VPIP**: {vpip/total:.1%} ({vpip}/{total})")
 st.markdown(f"- **PFR**: {pfr/total:.1%} ({pfr}/{total})")
-st.markdown(f"- **3bet%**: {three_bet/total:.1%} ({three_bet}/{total})")
+st.markdown(f"- **3bet%**: {three\_bet/total:.1%} ({three\_bet}/{total})")
 
-flop_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("flop") == "ベット")
-flop_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("flop") == "ベット")
-flop_cb_ip_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP")
-flop_cb_oop_base = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP")
+# ---------- ポストフロップ ----------
 
-turn_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("turn") == "ベット")
-turn_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("turn") == "ベット")
-turn_cb_ip_base = flop_cb_ip_base
-turn_cb_oop_base = flop_cb_oop_base
+flop\_cb\_ip = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "IP" and r.get("flop") == "ベット")
+flop\_cb\_oop = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "OOP" and r.get("flop") == "ベット")
+flop\_cb\_ip\_base = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "IP")
+flop\_cb\_oop\_base = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "OOP")
 
-river_cb_ip = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "IP" and r.get("river") == "ベット")
-river_cb_oop = sum(1 for r in records if r.get("last_raiser") and r.get("position") == "OOP" and r.get("river") == "ベット")
-river_cb_ip_base = flop_cb_ip_base
-river_cb_oop_base = flop_cb_oop_base
+turn\_cb\_ip = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "IP" and r.get("turn") == "ベット")
+turn\_cb\_oop = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "OOP" and r.get("turn") == "ベット")
+turn\_cb\_ip\_base = flop\_cb\_ip\_base
+turn\_cb\_oop\_base = flop\_cb\_oop\_base
 
-st.markdown(
-    f"- **Flop CB% (IP)**: {flop_cb_ip/flop_cb_ip_base:.1%} ({flop_cb_ip}/{flop_cb_ip_base})" if flop_cb_ip_base else "- **Flop CB% (IP)**: なし"
-)
-st.markdown(
-    f"- **Flop CB% (OOP)**
+river\_cb\_ip = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "IP" and r.get("river") == "ベット")
+river\_cb\_oop = sum(1 for r in records if r.get("last\_raiser") and r.get("position") == "OOP" and r.get("river") == "ベット")
+river\_cb\_ip\_base = flop\_cb\_ip\_base
+river\_cb\_oop\_base = flop\_cb\_oop\_base
+
+st.markdown(f"- **Flop CB% (IP)**: {flop\_cb\_ip/flop\_cb\_ip\_base:.1%} ({flop\_cb\_ip}/{flop\_cb\_ip\_base})" if flop\_cb\_ip\_base else "- **Flop CB% (IP)**: なし")
+st.markdown(f"- **Flop CB% (OOP)**: {flop\_cb\_oop/flop\_cb\_oop\_base:.1%} ({flop\_cb\_oop}/{flop\_cb\_oop\_base})" if flop\_cb\_oop\_base else "- **Flop CB% (OOP)**: なし")
+st.markdown(f"- **Turn CB% (IP)**: {turn\_cb\_ip/turn\_cb\_ip\_base:.1%} ({turn\_cb\_ip}/{turn\_cb\_ip\_base})" if turn\_cb\_ip\_base else "- **Turn CB% (IP)**: なし")
+st.markdown(f"- **Turn CB% (OOP)**: {turn\_cb\_oop/turn\_cb\_oop\_base:.1%} ({turn\_cb\_oop}/{turn\_cb\_oop\_base})" if turn\_cb\_oop\_base else "- **Turn CB% (OOP)**: なし")
+st.markdown(f"- **River CB% (IP)**: {river\_cb\_ip/river\_cb\_ip\_base:.1%} ({river\_cb\_ip}/{river\_cb\_ip\_base})" if river\_cb\_ip\_base else "- **River CB% (IP)**: なし")
+st.markdown(f"- **River CB% (OOP)**: {river\_cb\_oop/river\_cb\_oop\_base:.1%} ({river\_cb\_oop}/{river\_cb\_oop\_base})" if river\_cb\_oop\_base else "- **River CB% (OOP)**: なし")
