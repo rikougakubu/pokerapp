@@ -14,26 +14,13 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 # --- 認証 UI 埋め込み ---
-#web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON（ダブルクォートのみ）
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON（ダブルクォートのみ）
 
-#html_code = Path("email_login_component.html").read_text()
-#html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
-
-#components.html(html_code, height=360, scrolling=False)
-
-
-
-# --- 認証 UI 埋め込み ---
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]   # 1 行 JSON
-
-html_code = Path("auth_component.html").read_text()   # ← ★ ここだけファイル名変更
+html_code = Path("email_login_component.html").read_text()
+# JSON には ' が入らないので singleQuote 包みで OK
 html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
 
-components.html(html_code, height=220, scrolling=False)   # ← 高さも 220 に
-
-
-
-
+components.html(html_code, height=360, scrolling=False)
 
 # --- token 受信 ---
 token = streamlit_js_eval(
