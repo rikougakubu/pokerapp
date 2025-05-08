@@ -8,29 +8,29 @@ from db import insert_record, fetch_by_uid, db      # ← fetch_by_uid は db.py
 from google.cloud import firestore
 from collections import OrderedDict
 
+
 # ---------- Firebase Admin 初期化 ----------
-if not firebase_admin._apps:                # ★ ここを修正
+if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
-    firebase_admin.initialize_app(cred)     # ← これはそのまま
-# ---------- 認証 UI を埋め込む ----------
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]  # 1行JSON
+    firebase_admin.initialize_app(cred)
 
-# email_login_component.html を読み込んで cfg を差し込む
+# ---------- 認証 UI 挿入 ----------
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON
 html_code = Path("email_login_component.html").read_text()
-html_code = html_code.replace('content=""', f"content='{web_cfg}'", 1)
+cfg_escaped = web_cfg.replace('"', '&quot;')          # " → &quot; で HTML属性安全
+html_code = html_code.replace('content=""', f'content="{cfg_escaped}"', 1)
 
-components.html(html_code, height=320, scrolling=False)
+components.html(html_code, height=340, scrolling=False)
 
-# postMessage で token を受け取る
+# ---------- token 受信 ----------
 token = streamlit_js_eval(
     js_code="""
       window.token = window.token || "";
-      window.addEventListener("message", (e) => {
-        if (e.data.token) { window.token = e.data.token; }
+      window.addEventListener("message",(e)=>{
+        if(e.data.token){ window.token = e.data.token; }
       });
       return window.token;
-    """,
-    key="token_listener"
+    """, key="token_listener"
 )
 
 if token and "uid" not in st.session_state:
@@ -40,13 +40,12 @@ if token and "uid" not in st.session_state:
         st.session_state["email"] = info.get("email")
         st.success(f"ログイン成功: {st.session_state['email']}")
     except Exception as e:
-        st.error("トークン検証失敗: " + str(e))
+        st.error("トークン検証失敗: "+str(e))
 
 if "uid" not in st.session_state:
-    st.warning("ログインしてください")
     st.stop()
-
 uid = st.session_state["uid"]
+
 st.title("スタッツ解析アプリ")
 
 ###########################################################################
