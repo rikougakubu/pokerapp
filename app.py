@@ -2,17 +2,16 @@ import os, json, streamlit as st
 from pathlib import Path
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
-
-from firebase_admin import auth, credentials, initialize_app
+import firebase_admin                       # ★ 追加
+from firebase_admin import auth, credentials
 from db import insert_record, fetch_by_uid, db      # ← fetch_by_uid は db.py で定義
 from google.cloud import firestore
 from collections import OrderedDict
 
 # ---------- Firebase Admin 初期化 ----------
-if not initialize_app._apps:
+if not firebase_admin._apps:                # ★ ここを修正
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
-    initialize_app(cred)
-
+    firebase_admin.initialize_app(cred)     # ← これはそのまま
 # ---------- 認証 UI を埋め込む ----------
 web_cfg = os.environ["FIREBASE_WEB_CONFIG"]  # 1行JSON
 
