@@ -36,21 +36,67 @@
   const auth = firebase.auth();
   const twitterProvider = new firebase.auth.TwitterAuthProvider();
 
-  /* ---------- 自動 sign‑in (Email Link) ---------- */
-  window.addEventListener("DOMContentLoaded", ()=>{
-    if (firebase.auth().isSignInWithEmailLink(location.href)){
-      const saved = localStorage.getItem("link_email_for_login") || "";
-      const em = saved || prompt("Email を入力してください");
-      if(!em){ return; }
-      auth.signInWithEmailLink(em, location.href)
-          .then(r=>r.user.getIdToken())
-          .then(tok=>{
-            localStorage.removeItem("link_email_for_login");
-            window.parent.postMessage({token:tok},"*");
+
+
+  /* ---------- ★ Phone (SMS) ---------- */
+  // reCAPTCHA を DOM に非表示で設置
+  const recaptcha = new firebase.auth.RecaptchaVerifier(
+        document.createElement("div"),
+        {size:"invisible"}
+  );
+
+  let confirmationResult = null;
+
+  function sendSMS(){
+    const ph = phone.value.trim();
+    if(!ph){ msg.textContent="電話番号を入力"; return; }
+    auth.signInWithPhoneNumber(ph, recaptcha)
+        .then(res=>{
+           confirmationResult = res;
+           msg.textContent="SMS 送信済み。コードを入力してください";
+        })
+        .catch(e=> msg.textContent=e.message);
+  }
+
+  function verifySMS(){
+    if(!confirmationResult){ msg.textContent="先にSMSを送信"; return; }
+    confirmationResult.confirm(otp.value.trim())
+        .then(r=> r.user.getIdToken())
+        .then(tok=> window.parent.postMessage({token:tok}, "*"))
+        .catch(e=> msg.textContent=e.message);
+  }
+
+  /* ---------- ★ Anonymous ---------- */
+  function anonLogin(){
+    auth.signInAnonymously()
+        .then(r=> r.user.getIdToken())
+        .then(tok=> window.parent.postMessage({token:tok}, "*"))
+        .catch(e=> msg.textContent=e.message);
+  }
+
+
+
+
+function login(){
+  const em = email.value.trim(), pw = pass.value;
+  if(!em){ msg.textContent="Email を入力"; return; }
+
+  const fn = pw
+      ? auth.signInWithEmailAndPassword(em,pw)
+          .catch(err=>{
+             if(err.code === "auth/user-not-found"){
+               return auth.createUserWithEmailAndPassword(em,pw);
+             }
+             throw err;
           })
-          .catch(e=> msg.textContent=e.message);
-    }
-  });
+      : auth.signInWithEmailLink(em, "https://pokerapp-l57n.onrender.com");
+
+  fn.then(r=>r.user.getIdToken())
+    .then(tok=> window.parent.postMessage({token:tok},"*"))
+    .catch(e=> msg.textContent=e.message);
+}
+
+
   /* ---------- Magic Link ---------- */
 function sendLink(){
   const em = email.value.trim();
