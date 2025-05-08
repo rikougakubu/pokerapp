@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+  <meta name="cfg" content="">
+  <style>
+    body{font-family:sans-serif;text-align:center;margin:0;}
+    input{margin:4px;padding:6px;width:200px;}
+    button{padding:6px 12px;margin:6px;}
+  </style>
+</head>
+<body>
+  <h3>Login</h3>
+  <input id="email" type="email" placeholder="Email"><br>
+  <input id="pass" type="password" placeholder="Password (任意)"><br>
+  <button onclick="login()">Sign‑in</button>
+  <button onclick="sendLink()">Magic Link</button>
+  <p id="msg"></p>
+
+<script>
+const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
+firebase.initializeApp(cfg);
+const auth = firebase.auth();
+
+function login(){
+  const em = email.value, pw = pass.value;
+  if(!em){ msg.textContent="email必須"; return; }
+  (pw ? auth.signInWithEmailAndPassword(em,pw)
+      : auth.signInWithEmailLink(em, window.location.href))
+  .then(r=>r.user.getIdToken())
+  .then(tok=> window.parent.postMessage({token:tok},'*'))
+  .catch(e=> msg.textContent=e.message);
+}
+
+function sendLink(){
+  const em = email.value;
+  if(!em){ msg.textContent="email必須"; return; }
+  auth.sendSignInLinkToEmail(em,{url:window.location.href,handleCodeInApp:true})
+      .then(()=>msg.textContent="Magicリンク送信しました")
+      .catch(e=>msg.textContent=e.message);
+}
+</script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import streamlit as st, os, json
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
 from firebase_admin import auth
@@ -8,38 +9,23 @@ from db import insert_record, fetch_by_uid, db     # ★ fetch_by_uid を import
 from google.cloud import firestore
 from collections import OrderedDict
 
-CLIENT_ID = "366474801487-5g9g8k8333f8jsjv4bd1njpue13rek06.apps.googleusercontent.com"
 
-
-# ---------------- Google Sign‑in ボタン ----------------
+# ------------ Email/Password / MagicLink ログイン UI ------------
+cfg = os.environ["FIREBASE_WEB_CONFIG"]   # 1行JSON
 components.html(f"""
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<div id="g_id_onload"
-     data-client_id="{CLIENT_ID}"
-     data-context="signin"
-     data-callback="handleCred"
-     data-auto_prompt="false"></div>
-<div class="g_id_signin" data-type="standard"></div>
+<meta name="cfg" content='{cfg}'>
+<iframe src="email_login_component.html"
+        style="border:none;width:260px;height:240px;"></iframe>
+""", height=260)
 
-<script>
-  function handleCred(resp){{
-    window.postMessage({{token: resp.credential}}, "*");
-  }}
-</script>
-""", height=120)
-
-# --------------- ID トークン受信と検証 -----------------
+# ------------ postMessage で token を受け取り session_state に保存 ------------
 token = streamlit_js_eval(
     js_code="""
-        window.token = window.token || "";
-        window.addEventListener("message", (e) => {
-          if (e.data.token) {
-            window.token = e.data.token;
-          }
-        });
-        return window.token;
+      window.token = window.token || "";
+      window.addEventListener("message",(e)=>{ if(e.data.token){ window.token=e.data.token; }});
+      return window.token;
     """,
-    key="get_token"
+    key="token_listener"
 )
 
 if token and "uid" not in st.session_state:
@@ -48,14 +34,15 @@ if token and "uid" not in st.session_state:
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email")
         st.success(f"ログイン成功: {st.session_state['email']}")
-    except Exception:
-        st.error("トークン検証失敗")
+    except Exception as e:
+        st.error("トークン検証失敗: "+str(e))
 
 if "uid" not in st.session_state:
-    st.warning("Google ボタンでログインしてください")
     st.stop()
 
 uid = st.session_state["uid"]
+
+
 # ------------------------------------------------------
 
 # ────────────────────────── 認証フェーズ ──────────────────────────
