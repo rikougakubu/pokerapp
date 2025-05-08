@@ -33,7 +33,7 @@ function pwLogin(){
         throw e;
       })
       .then(u=>u.user.getIdToken())
-      .then(tok=>window.parent.postMessage({token:tok},"*"))
+      .then(tok=>window.parent.parent.postMessage({token:tok},"*"))
       .catch(e=>msg.textContent=e.message);
 }
 
@@ -41,7 +41,7 @@ function pwLogin(){
 function anon(){
   auth.signInAnonymously()
       .then(u=>u.user.getIdToken())
-      .then(tok=>window.parent.postMessage({token:tok},"*"))
+      .then(tok=>window.parent.parent.postMessage({token:tok},"*"))
       .catch(e=>msg.textContent=e.message);
 }
 </script>
