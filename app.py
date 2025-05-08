@@ -18,7 +18,10 @@ web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
 
 html_code = Path("email_login_component.html").read_text()
 html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
-components.html(html_code, height=360, scrolling=False)
+
+
+AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"  # ←外部URLに変更
+components.iframe(AUTH_UI_URL, height=360, scrolling=False)
 
 # --- token 受信 ---
 token = streamlit_js_eval(
