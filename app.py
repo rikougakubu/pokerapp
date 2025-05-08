@@ -2,9 +2,9 @@ import os, json, streamlit as st
 from pathlib import Path
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
-import firebase_admin                       # ★ 追加
+import firebase_admin
 from firebase_admin import auth, credentials
-from db import insert_record, fetch_by_uid, db      # ← fetch_by_uid は db.py で定義
+from db import insert_record, fetch_by_uid, db
 from google.cloud import firestore
 from collections import OrderedDict
 
@@ -14,12 +14,10 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 # --- 認証 UI 埋め込み ---
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON（ダブルクォートのみ）
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
 
 html_code = Path("email_login_component.html").read_text()
-# JSON には ' が入らないので singleQuote 包みで OK
 html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
-
 components.html(html_code, height=360, scrolling=False)
 
 # --- token 受信 ---
@@ -30,7 +28,8 @@ token = streamlit_js_eval(
         if(e.data.token){ window.token = e.data.token; }
       });
       return window.token;
-    """, key="token_listener"
+    """,
+    key="token_listener"
 )
 
 if token and "uid" not in st.session_state:
@@ -43,10 +42,10 @@ if token and "uid" not in st.session_state:
         st.error("トークン検証失敗: "+str(e))
 
 if "uid" not in st.session_state:
+    st.warning("ログインしてください")
     st.stop()
 
 uid = st.session_state["uid"]
-
 st.title("スタッツ解析アプリ")
 
 ###########################################################################
