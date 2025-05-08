@@ -8,21 +8,21 @@ from db import insert_record, fetch_by_uid, db      # ← fetch_by_uid は db.py
 from google.cloud import firestore
 from collections import OrderedDict
 
-
-# ---------- Firebase Admin 初期化 ----------
+# --- Admin 初期化 ---
 if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# ---------- 認証 UI 挿入 ----------
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON
+# --- 認証 UI 埋め込み ---
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]          # 1行JSON（ダブルクォートのみ）
+
 html_code = Path("email_login_component.html").read_text()
-cfg_escaped = web_cfg.replace('"', '&quot;')          # " → &quot; で HTML属性安全
-html_code = html_code.replace('content=""', f'content="{cfg_escaped}"', 1)
+# JSON には ' が入らないので singleQuote 包みで OK
+html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
 
-components.html(html_code, height=340, scrolling=False)
+components.html(html_code, height=360, scrolling=False)
 
-# ---------- token 受信 ----------
+# --- token 受信 ---
 token = streamlit_js_eval(
     js_code="""
       window.token = window.token || "";
@@ -44,6 +44,7 @@ if token and "uid" not in st.session_state:
 
 if "uid" not in st.session_state:
     st.stop()
+
 uid = st.session_state["uid"]
 
 st.title("スタッツ解析アプリ")

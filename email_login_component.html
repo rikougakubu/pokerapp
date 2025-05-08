@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+  <!-- 互換ビルド v9.x ― ESM でなく window.firebase グローバル -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
   <!-- Python がここを書き換える -->
-  <meta name="cfg" content="">
-
+  <meta name="cfg" content=''>
   <style>
-    body{font-family:sans-serif;text-align:center;margin:0;padding:12px;}
+    body{font-family:sans-serif;text-align:center;margin:0;padding:14px;}
     input{margin:4px;padding:6px;width:200px;border:1px solid #aaa;border-radius:4px;}
-    button{padding:6px 12px;margin:4px;border:none;border-radius:4px;
-           background:#4285f4;color:#fff;cursor:pointer;}
-    #msg{font-size:0.85em;color:#d33;height:1.2em;margin-top:6px;}
+    button{padding:6px 12px;margin:4px;border:none;border-radius:4px;background:#4285f4;color:#fff;cursor:pointer;}
+    #msg{font-size:0.9em;color:#d33;height:1.2em;margin-top:6px;}
   </style>
 </head>
 <body>
   <h4>Email Login</h4>
   <input id="email" type="email" placeholder="Email"><br>
-  <input id="pass" type="password" placeholder="Password(任意)"><br>
+  <input id="pass"  type="password" placeholder="Password(任意)"><br>
   <button onclick="login()">Sign‑in</button>
   <button onclick="sendLink()">Magic Link</button>
   <hr style="width:70%;margin:12px auto">
@@ -30,12 +29,14 @@
   try{
     const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
     firebase.initializeApp(cfg);
-  }catch(e){ document.getElementById('msg').textContent="Firebase設定が空です"; }
+  }catch(e){
+    document.getElementById('msg').textContent="⚠ Firebase config 読み込み失敗";
+  }
 
   const auth = firebase.auth();
   const twitterProvider = new firebase.auth.TwitterAuthProvider();
 
-  /* ---------- Email + Password or EmailLink ---------- */
+  /* ---------- Email login ---------- */
   function login(){
     const em = email.value.trim(), pw = pass.value;
     if(!em){ msg.textContent="Email を入力"; return; }
@@ -43,19 +44,26 @@
     (pw ? auth.signInWithEmailAndPassword(em,pw)
         : auth.signInWithEmailLink(em, location.href))
     .then(r=>r.user.getIdToken())
-    .then(tok=> window.parent.postMessage({token:tok},"*"))   /* ← parent に戻す */
+    .then(tok=> window.parent.postMessage({token:tok},"*"))
     .catch(e=> msg.textContent=e.message);
   }
 
-  /* ---------- Magic Link 送信 ---------- */
+  /* ---------- Magic Link ---------- */
   function sendLink(){
     const em = email.value.trim();
     if(!em){ msg.textContent="Email を入力"; return; }
     auth.sendSignInLinkToEmail(em,{url:location.href,handleCodeInApp:true})
         .then(()=> msg.textContent="メールを確認してください")
-        .catch(e => msg.textContent=e.message);
+        .catch(e=> msg.textContent=e.message);
   }
 
+  /* ---------- Twitter ---------- */
+  function twitterLogin(){
+    auth.signInWithPopup(twitterProvider)
+        .then(r=>r.user.getIdToken())
+        .then(tok=> window.parent.postMessage({token:tok},"*"))
+        .catch(e=> msg.textContent=e.message);
+  }
 </script>
 </body>
 </html>
