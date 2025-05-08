@@ -15,13 +15,10 @@ if not firebase_admin._apps:
 
 # --- 認証 UI 埋め込み ---
 web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
+AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"  # 外部ホストされた認証 UI
 
-html_code = Path("email_login_component.html").read_text()
-html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
-
-
-AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"  # ←外部URLに変更
-components.iframe(AUTH_UI_URL, height=360, scrolling=False)
+# iframe 埋め込み（外部認証 UI）
+components.iframe(AUTH_UI_URL, height=520, scrolling=False)
 
 # --- token 受信 ---
 token = streamlit_js_eval(
