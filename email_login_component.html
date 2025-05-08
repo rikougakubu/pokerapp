@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- 互換ビルド v9.x ― ESM でなく window.firebase グローバル -->
+  <!-- Firebase SDK 互換ビルド (window.firebase グローバル) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
@@ -10,18 +10,34 @@
   <style>
     body{font-family:sans-serif;text-align:center;margin:0;padding:14px;}
     input{margin:4px;padding:6px;width:200px;border:1px solid #aaa;border-radius:4px;}
-    button{padding:6px 12px;margin:4px;border:none;border-radius:4px;background:#4285f4;color:#fff;cursor:pointer;}
+    button{padding:6px 12px;margin:4px;border:none;border-radius:4px;
+           background:#4285f4;color:#fff;cursor:pointer;}
     #msg{font-size:0.9em;color:#d33;height:1.2em;margin-top:6px;}
   </style>
 </head>
 <body>
-  <h4>Email Login</h4>
+  <h4>Email / Phone Login</h4>
+
+  <!-- Email / PW -->
   <input id="email" type="email" placeholder="Email"><br>
   <input id="pass"  type="password" placeholder="Password(任意)"><br>
-  <button onclick="login()">Sign‑in</button>
+  <button onclick="pwLogin()">Sign‑in (PW)</button>
   <button onclick="sendLink()">Magic Link</button>
+
   <hr style="width:70%;margin:12px auto">
+
+  <!-- Phone -->
+  <input id="phone" type="tel" placeholder="+81xxxxxxxxx"><br>
+  <button style="background:#34a853" onclick="sendSMS()">SMS 送信</button>
+  <input id="otp" type="text" placeholder="確認コード" style="width:120px;">
+  <button onclick="verifySMS()">Verify</button>
+
+  <hr style="width:70%;margin:12px auto">
+
+  <!-- Twitter / Anonymous -->
   <button style="background:#1d9bf0" onclick="twitterLogin()">Twitter でログイン</button>
+  <button style="background:#555"    onclick="anonLogin()">匿名でログイン</button>
+
   <p id="msg"></p>
 
 <script>
@@ -36,14 +52,56 @@
   const auth = firebase.auth();
   const twitterProvider = new firebase.auth.TwitterAuthProvider();
 
+  /* ---------- Email/PW ---------- */
+  function pwLogin(){
+    const em = email.value.trim(), pw = pass.value;
+    if(!em || !pw){ msg.textContent="Email と PW を入力"; return; }
 
+    auth.signInWithEmailAndPassword(em,pw)
+        .catch(err=>{
+           if(err.code === "auth/user-not-found"){           // 自動登録
+             return auth.createUserWithEmailAndPassword(em,pw);
+           }
+           throw err;
+        })
+        .then(r=> r.user.getIdToken())
+        .then(tok=> window.parent.postMessage({token:tok},"*"))
+        .catch(e=> msg.textContent=e.message);
+  }
 
-  /* ---------- ★ Phone (SMS) ---------- */
-  // reCAPTCHA を DOM に非表示で設置
+  /* ---------- Magic Link 送信 ---------- */
+  function sendLink(){
+    const em = email.value.trim();
+    if(!em){ msg.textContent="Email を入力"; return; }
+
+    localStorage.setItem("link_email_for_login", em);      // 後で取り出す
+
+    auth.sendSignInLinkToEmail(em,{
+        url: "https://pokerapp-l57n.onrender.com",         // 固定 URL
+        handleCodeInApp: true
+    })
+    .then(()=> msg.textContent="メールを確認してください")
+    .catch(e => msg.textContent=e.message);
+  }
+
+  /* ---------- ページロードで EmailLink を自動判定 ---------- */
+  window.addEventListener("DOMContentLoaded", ()=>{
+    if(auth.isSignInWithEmailLink(location.href)){
+      const em = localStorage.getItem("link_email_for_login") || prompt("Email を入力");
+      if(!em){ return; }
+      auth.signInWithEmailLink(em, location.href)
+          .then(r=> r.user.getIdToken())
+          .then(tok=>{
+             localStorage.removeItem("link_email_for_login");
+             window.parent.postMessage({token:tok},"*");
+          })
+          .catch(e=> msg.textContent=e.message);
+    }
+  });
+
+  /* ---------- Phone (SMS) ---------- */
   const recaptcha = new firebase.auth.RecaptchaVerifier(
-        document.createElement("div"),
-        {size:"invisible"}
-  );
+        document.createElement("div"), {size:"invisible"});
 
   let confirmationResult = null;
 
@@ -66,57 +124,18 @@
         .catch(e=> msg.textContent=e.message);
   }
 
-  /* ---------- ★ Anonymous ---------- */
-  function anonLogin(){
-    auth.signInAnonymously()
-        .then(r=> r.user.getIdToken())
-        .then(tok=> window.parent.postMessage({token:tok}, "*"))
-        .catch(e=> msg.textContent=e.message);
-  }
-
-
-
-
-function login(){
-  const em = email.value.trim(), pw = pass.value;
-  if(!em){ msg.textContent="Email を入力"; return; }
-
-  const fn = pw
-      ? auth.signInWithEmailAndPassword(em,pw)
-          .catch(err=>{
-             if(err.code === "auth/user-not-found"){
-               return auth.createUserWithEmailAndPassword(em,pw);
-             }
-             throw err;
-          })
-      : auth.signInWithEmailLink(em, "https://pokerapp-l57n.onrender.com");
-
-  fn.then(r=>r.user.getIdToken())
-    .then(tok=> window.parent.postMessage({token:tok},"*"))
-    .catch(e=> msg.textContent=e.message);
-}
-
-
-  /* ---------- Magic Link ---------- */
-function sendLink(){
-  const em = email.value.trim();
-  if(!em){ msg.textContent="Email を入力"; return; }
-
-  // ★ ここで保存
-  localStorage.setItem("link_email_for_login", em);
-
-  auth.sendSignInLinkToEmail(em,{
-      url: "https://pokerapp-l57n.onrender.com",   // 固定
-      handleCodeInApp: true
-  })
-  .then(()=> msg.textContent="メールを確認してください")
-  .catch(e => msg.textContent=e.message);
-}
-
   /* ---------- Twitter ---------- */
   function twitterLogin(){
     auth.signInWithPopup(twitterProvider)
         .then(r=>r.user.getIdToken())
+        .then(tok=> window.parent.postMessage({token:tok},"*"))
+        .catch(e=> msg.textContent=e.message);
+  }
+
+  /* ---------- Anonymous ---------- */
+  function anonLogin(){
+    auth.signInAnonymously()
+        .then(r=> r.user.getIdToken())
         .then(tok=> window.parent.postMessage({token:tok},"*"))
         .catch(e=> msg.textContent=e.message);
   }
