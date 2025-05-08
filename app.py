@@ -1,13 +1,12 @@
 import os, json, streamlit as st
 from firebase_admin import auth
-from db import insert_record, fetch_records, db
+from db import insert_record, fetch_by_uid, db     # ★ fetch_by_uid を import
 from google.cloud import firestore
 from collections import OrderedDict
 
 # ────────────────────────── 認証フェーズ ──────────────────────────
 st.title("スタッツ解析アプリ")
 
-# Google ログインボタン + postMessage（デモ用トークン欄は削除済）
 if "uid" not in st.session_state:
     st.warning("ログインが必要です")
     st.stop()
@@ -18,109 +17,141 @@ uid = st.session_state["uid"]
 # 1. 入力エリア ─── ゲーム名・ハンド・アクション
 ###########################################################################
 
-# ユーザーごとのゲームリスト
-user_docs = db.collection("hands").where("uid", "==", uid).stream()
-all_games_initial = sorted({d.to_dict().get("game", "未分類") for d in user_docs})
+# ▼ そのユーザーのレコード全部を一度取得
+records_all = fetch_by_uid(uid)
 
+# ゲームリストを作成
+all_games_initial = sorted({r.get("game", "未分類") for r in records_all})
 GAME_NEW = "＋ 新規ゲームを追加"
 options = [GAME_NEW] + all_games_initial if all_games_initial else [GAME_NEW]
 
 selected_game_opt = st.selectbox("ゲームを選択", options, key="game_select")
-game = st.text_input("新しいゲーム名を入力" if selected_game_opt == GAME_NEW else "ゲーム名",
-                     value="" if selected_game_opt == GAME_NEW else selected_game_opt,
-                     key="game_input")
+game = st.text_input(
+    "新しいゲーム名を入力" if selected_game_opt == GAME_NEW else "ゲーム名",
+    value="" if selected_game_opt == GAME_NEW else selected_game_opt,
+    key="game_input",
+)
 
-# --- ハンド選択（169通り） ---
+# --- ハンド169通り ---
 ranks = list("AKQJT98765432")
-hand_opts = [r1 + r2 if i == j                 # ペア
-             else r1 + r2 + "s" if i < j      # suited
-             else r2 + r1 + "o"               # offsuit
-             for i, r1 in enumerate(ranks) for j, r2 in enumerate(ranks)]
+hand_opts = [
+    r1 + r2 if i == j else r1 + r2 + "s" if i < j else r2 + r1 + "o"
+    for i, r1 in enumerate(ranks) for j, r2 in enumerate(ranks)
+]
 hand = st.selectbox("ハンドを選択", hand_opts, key="hand_select")
 
-preflop_action = st.selectbox("プリフロップアクション",
-    ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"], key="preflop")
+preflop_action = st.selectbox(
+    "プリフロップアクション",
+    ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"],
+    key="preflop",
+)
+multiplayer_type = st.radio(
+    "ヘッズアップ or マルチウェイ", ["ヘッズアップ", "マルチウェイ"], key="multi"
+)
 
-multiplayer_type = st.radio("ヘッズアップ or マルチウェイ",
-    ["ヘッズアップ", "マルチウェイ"], key="multi")
-
-# --- ポストフロップ入力（元のロジックを踏襲） ---
-last_raiser = False; position = ""; flop = turn = river = "なし"; turn_type = river_type = ""
+# --- ポストフロップ入力 ---
+last_raiser = False
+position = ""
+flop = turn = river = "なし"
+turn_type = river_type = ""
 
 if preflop_action != "フォールド" and multiplayer_type == "ヘッズアップ":
     position = st.selectbox("ポジション", ["IP", "OOP"])
     last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
 
-    flop = st.selectbox("フロップアクション",
-        ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
+    flop = st.selectbox(
+        "フロップアクション",
+        ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
+    )
 
-    if flop not in ["なし","フォールド"]:
-        turn = st.selectbox("ターンアクション",
-            ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
-        if turn in ["ベット","レイズ","3bet"]:
-            turn_type = st.radio("ターンのベットタイプ", ["バリュー","ブラフ"])
-        if turn not in ["なし","フォールド"]:
-            river = st.selectbox("リバーアクション",
-                ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
-            if river in ["ベット","レイズ","3bet"]:
-                river_type = st.radio("リバーのベットタイプ", ["バリュー","ブラフ"])
+    if flop not in ["なし", "フォールド"]:
+        turn = st.selectbox(
+            "ターンアクション",
+            ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
+        )
+        if turn in ["ベット", "レイズ", "3bet"]:
+            turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"])
+        if turn not in ["なし", "フォールド"]:
+            river = st.selectbox(
+                "リバーアクション",
+                ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
+            )
+            if river in ["ベット", "レイズ", "3bet"]:
+                river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"])
 
-# --- 保存ボタン ---
+# --- 保存 ---
 if st.button("ハンドを記録する"):
     if not game:
         st.error("ゲーム名を入力してください")
     else:
-        insert_record(uid, {
-            "uid": uid,
-            "game": game,
-            "hand": hand,
-            "preflop": preflop_action,
-            "multiway": multiplayer_type,
-            "position": position,
-            "last_raiser": last_raiser,
-            "flop": flop,
-            "turn": turn,
-            "turn_type": turn_type,
-            "river": river,
-            "river_type": river_type,
-            "timestamp": firestore.SERVER_TIMESTAMP,
-        })
+        insert_record(
+            uid,
+            {
+                "game": game,
+                "hand": hand,
+                "preflop": preflop_action,
+                "multiway": multiplayer_type,
+                "position": position,
+                "last_raiser": last_raiser,
+                "flop": flop,
+                "turn": turn,
+                "turn_type": turn_type,
+                "river": river,
+                "river_type": river_type,
+                "timestamp": firestore.SERVER_TIMESTAMP,
+            },
+        )
         st.success("保存しました")
         st.experimental_rerun()
 
 ###########################################################################
-# 2. 記録済みゲームの表示・削除  ※ uid でフィルタ
+# 2. 記録済みゲームの表示・削除
 ###########################################################################
 
 st.subheader("記録済みゲームの表示")
 
-user_docs = list(db.collection("hands").where("uid", "==", uid)
-                 .order_by("timestamp", direction="DESCENDING").stream())
+# Firestore ドキュメントを削除操作で使うので再取得（uid フィルタ済み）
+user_docs = list(
+    db.collection("hands")
+    .where("uid", "==", uid)
+    .order_by("timestamp", direction="DESCENDING")
+    .stream()
+)
 
-games_ordered = list(OrderedDict((d.to_dict().get("game", "未分類"), None)
-                                 for d in user_docs))
+games_ordered = list(
+    OrderedDict((d.to_dict().get("game", "未分類"), None) for d in user_docs)
+)
 
-view_game = st.selectbox("表示するゲームを選んでください", games_ordered, key="view_game")
+view_game = st.selectbox("表示するゲームを選択", games_ordered, key="view_game")
 
 docs_view = [d for d in user_docs if d.to_dict().get("game") == view_game]
 records = [d.to_dict() for d in docs_view]
 
-col1, col2 = st.columns([2,1])
+col1, col2 = st.columns([2, 1])
 with col1:
     if st.button(f"⚠️ 『{view_game}』を全部削除"):
-        for d in docs_view: d.reference.delete()
-        st.success("削除しました"); st.experimental_rerun()
+        for d in docs_view:
+            d.reference.delete()
+        st.success("削除しました")
+        st.experimental_rerun()
 
 with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
     for d in docs_view:
-        rec = d.to_dict(); st.write(rec)
+        rec = d.to_dict()
+        st.write(rec)
         if st.button(f"このハンドを削除（{rec['hand']}）", key=f"del_{d.id}"):
-            d.reference.delete(); st.success("削除"); st.experimental_rerun()
+            d.reference.delete()
+            st.success("削除")
+            st.experimental_rerun()
 
 ###########################################################################
-# 3. スタッツ解析（元の計算ロジックは変更なし）  records は uid限定
+# 3. スタッツ解析（records は uid 限定）
 ###########################################################################
-# ...（既存のスタッツ解析ロジックをここに続けてください）
+# 既存のスタッツ計算コードをそのまま利用できます
+
+
+
+
 st.subheader(f"『{view_game}』の統計")
 total = len(records)
 vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
