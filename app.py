@@ -30,11 +30,16 @@ components.html(f"""
 
 # --------------- ID トークン受信と検証 -----------------
 token = streamlit_js_eval(
-    js_code=\"\"\"
-    window.token = window.token || "";
-    window.addEventListener("message", (e)=>{ if(e.data.token){ window.token = e.data.token; }});
-    return window.token;
-    \"\"\", key="get_token"
+    js_code="""
+        window.token = window.token || "";
+        window.addEventListener("message", (e) => {
+          if (e.data.token) {
+            window.token = e.data.token;
+          }
+        });
+        return window.token;
+    """,
+    key="get_token"
 )
 
 if token and "uid" not in st.session_state:
