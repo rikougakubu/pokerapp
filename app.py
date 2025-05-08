@@ -1,11 +1,63 @@
+import streamlit.components.v1 as components
+from streamlit_js_eval import streamlit_js_eval
+from firebase_admin import auth
+
 import os, json, streamlit as st
 from firebase_admin import auth
 from db import insert_record, fetch_by_uid, db     # ★ fetch_by_uid を import
 from google.cloud import firestore
 from collections import OrderedDict
 
+CLIENT_ID = "366474801487-5g9g8k8333f8jsjv4bd1njpue13rek06.apps.googleusercontent.com"
+
+
+# ---------------- Google Sign‑in ボタン ----------------
+components.html(f"""
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<div id="g_id_onload"
+     data-client_id="{CLIENT_ID}"
+     data-context="signin"
+     data-callback="handleCred"
+     data-auto_prompt="false"></div>
+<div class="g_id_signin" data-type="standard"></div>
+
+<script>
+  function handleCred(resp){{
+    window.postMessage({{token: resp.credential}}, "*");
+  }}
+</script>
+""", height=120)
+
+# --------------- ID トークン受信と検証 -----------------
+token = streamlit_js_eval(
+    js_code=\"\"\"
+    window.token = window.token || "";
+    window.addEventListener("message", (e)=>{ if(e.data.token){ window.token = e.data.token; }});
+    return window.token;
+    \"\"\", key="get_token"
+)
+
+if token and "uid" not in st.session_state:
+    try:
+        info = auth.verify_id_token(token)
+        st.session_state["uid"] = info["uid"]
+        st.session_state["email"] = info.get("email")
+        st.success(f"ログイン成功: {st.session_state['email']}")
+    except Exception:
+        st.error("トークン検証失敗")
+
+if "uid" not in st.session_state:
+    st.warning("Google ボタンでログインしてください")
+    st.stop()
+
+uid = st.session_state["uid"]
+# ------------------------------------------------------
+
 # ────────────────────────── 認証フェーズ ──────────────────────────
 st.title("スタッツ解析アプリ")
+
+
+
 
 if "uid" not in st.session_state:
     st.warning("ログインが必要です")
