@@ -1,105 +1,86 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <meta name="cfg" content=''>
-  <style>
-    body { font-family: sans-serif; text-align: center; margin: 0; padding: 14px; }
-    input, button { margin: 4px; padding: 6px; border-radius: 4px; }
-    button { background: #4285f4; color: white; border: none; }
-    #msg { color: #d33; font-size: 0.9em; height: 1.2em; margin-top: 6px; }
-  </style>
-</head>
-<body>
-  <h4>Email / Phone Login</h4>
-  <input id="email" type="email" placeholder="Email"><br>
-  <input id="pass" type="password" placeholder="Password(任意)"><br>
-  <button onclick="pwLogin()">Sign‑in (PW)</button>
-  <button onclick="sendLink()">Magic Link</button>
-  <hr style="width:70%">
-  <input id="phone" type="tel" placeholder="+81xxxxxxxxx"><br>
-  <button onclick="sendSMS()" style="background:#34a853">SMS 送信</button>
-  <input id="otp" type="text" placeholder="確認コード" style="width:120px;">
-  <button onclick="verifySMS()">Verify</button>
-  <hr style="width:70%">
-  <button onclick="twitterLogin()" style="background:#1da1f2">Twitter でログイン</button>
-  <button onclick="anonLogin()" style="background:#555">匿名でログイン</button>
-  <div id="recaptcha-container" style="display:none"></div>
-  <p id="msg"></p>
-
-  <script>
-    try {
-      const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
+<script>
+  try {
+    const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
+    if (firebase.apps.length === 0) {
       firebase.initializeApp(cfg);
-    } catch (e) { document.getElementById("msg").textContent = "⚠ Firebase config 読み込み失敗"; }
+    }
+  } catch (e) {
+    document.getElementById("msg").textContent = "⚠ Firebase config 読み込み失敗";
+  }
 
-    const auth = firebase.auth();
-    const twitterProvider = new firebase.auth.TwitterAuthProvider();
-    const recaptcha = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
+  const auth = firebase.auth();
+  const twitterProvider = new firebase.auth.TwitterAuthProvider();
+  const recaptcha = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
 
-    function pwLogin() {
-      const em = email.value.trim(), pw = pass.value;
-      if (!em || !pw) return msg.textContent = "Email と PW を入力";
-      auth.signInWithEmailAndPassword(em, pw).catch(err => {
-        if (err.code === "auth/user-not-found") return auth.createUserWithEmailAndPassword(em, pw);
-        throw err;
-      })
+  let confirmationResult = null;  // ← グローバル定義
+
+  function pwLogin() {
+    const em = email.value.trim(), pw = pass.value;
+    if (!em || !pw) return msg.textContent = "Email と PW を入力";
+    auth.signInWithEmailAndPassword(em, pw).catch(err => {
+      if (err.code === "auth/user-not-found") return auth.createUserWithEmailAndPassword(em, pw);
+      throw err;
+    })
+    .then(r => r.user.getIdToken())
+    .then(tok => window.parent.postMessage({ token: tok }, "*"))
+    .catch(e => msg.textContent = e.message);
+  }
+
+  function sendLink() {
+    const em = email.value.trim();
+    if (!em) return msg.textContent = "Email を入力";
+    localStorage.setItem("link_email_for_login", em);
+    auth.sendSignInLinkToEmail(em, {
+      url: "https://pokerapp-l57n.onrender.com",
+      handleCodeInApp: true
+    }).then(() => msg.textContent = "メールを確認してください")
+      .catch(e => msg.textContent = e.message);
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    if (auth.isSignInWithEmailLink(location.href)) {
+      const em = localStorage.getItem("link_email_for_login") || prompt("Email 入力");
+      if (!em) return;
+      auth.signInWithEmailLink(em, location.href)
+        .then(r => r.user.getIdToken())
+        .then(tok => {
+          localStorage.removeItem("link_email_for_login");
+          window.parent.postMessage({ token: tok }, "*");
+        })
+        .catch(e => msg.textContent = e.message);
+    }
+  });
+
+  function sendSMS() {
+    const ph = phone.value.trim();
+    if (!ph) return msg.textContent = "電話番号を入力";
+    auth.signInWithPhoneNumber(ph, recaptcha)
+      .then(res => { confirmationResult = res; msg.textContent = "SMS 送信済み"; })
+      .catch(e => msg.textContent = e.message);
+  }
+
+  function verifySMS() {
+    if (!confirmationResult) {
+      msg.textContent = "先に SMS を送信してください";
+      return;
+    }
+    confirmationResult.confirm(otp.value.trim())
       .then(r => r.user.getIdToken())
       .then(tok => window.parent.postMessage({ token: tok }, "*"))
       .catch(e => msg.textContent = e.message);
-    }
+  }
 
-    function sendLink() {
-      const em = email.value.trim();
-      if (!em) return msg.textContent = "Email を入力";
-      localStorage.setItem("link_email_for_login", em);
-      auth.sendSignInLinkToEmail(em, {
-        url: "https://pokerapp-l57n.onrender.com",
-        handleCodeInApp: true
-      }).then(() => msg.textContent = "メールを確認してください")
-        .catch(e => msg.textContent = e.message);
-    }
+  function twitterLogin() {
+    auth.signInWithPopup(twitterProvider)
+      .then(r => r.user.getIdToken())
+      .then(tok => window.parent.postMessage({ token: tok }, "*"))
+      .catch(e => msg.textContent = e.message);
+  }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      if (auth.isSignInWithEmailLink(location.href)) {
-        const em = localStorage.getItem("link_email_for_login") || prompt("Email 入力");
-        if (!em) return;
-        auth.signInWithEmailLink(em, location.href)
-          .then(r => r.user.getIdToken())
-          .then(tok => window.parent.postMessage({ token: tok }, "*"))
-          .catch(e => msg.textContent = e.message);
-      }
-    });
-
-    function sendSMS() {
-      const ph = phone.value.trim();
-      if (!ph) return msg.textContent = "電話番号を入力";
-      auth.signInWithPhoneNumber(ph, recaptcha)
-        .then(res => { confirmationResult = res; msg.textContent = "SMS 送信済み"; })
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function verifySMS() {
-      confirmationResult.confirm(otp.value.trim())
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function twitterLogin() {
-      auth.signInWithPopup(twitterProvider)
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function anonLogin() {
-      auth.signInAnonymously()
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-  </script>
-</body>
-</html>
+  function anonLogin() {
+    auth.signInAnonymously()
+      .then(r => r.user.getIdToken())
+      .then(tok => window.parent.postMessage({ token: tok }, "*"))
+      .catch(e => msg.textContent = e.message);
+  }
+</script>
