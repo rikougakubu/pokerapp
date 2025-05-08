@@ -4,30 +4,24 @@ import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
 import firebase_admin
 from firebase_admin import auth, credentials
-from db import insert_record, fetch_by_uid, db
-from google.cloud import firestore
-from collections import OrderedDict
 
-# --- Admin 初期化 ---
 if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- 認証 UI 埋め込み ---
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
-AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"  # 外部ホストされた認証 UI
+st.title("スタッツ解析アプリ")
 
-# iframe 埋め込み（外部認証 UI）
-components.iframe(AUTH_UI_URL, height=520, scrolling=False)
+html_url = "https://auth-ui-app.onrender.com/email_login_component.html"
+components.iframe(html_url, height=420)
 
-# --- token 受信 ---
+# JS listener
 token = streamlit_js_eval(
     js_code="""
-      window.token = window.token || "";
-      window.addEventListener("message",(e)=>{
+    window.token = window.token || "";
+    window.addEventListener("message",(e)=>{
         if(e.data.token){ window.token = e.data.token; }
-      });
-      return window.token;
+    });
+    return window.token;
     """,
     key="token_listener"
 )
@@ -37,17 +31,15 @@ if token and "uid" not in st.session_state:
         info = auth.verify_id_token(token)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email")
-        st.success(f"ログイン成功: {st.session_state['email']}")
+        st.success("ログイン成功: " + st.session_state["email"])
     except Exception as e:
-        st.error("トークン検証失敗: "+str(e))
+        st.error("認証失敗: " + str(e))
 
 if "uid" not in st.session_state:
     st.warning("ログインしてください")
     st.stop()
 
 uid = st.session_state["uid"]
-st.title("スタッツ解析アプリ")
-
 ###########################################################################
 # 1. 入力エリア
 ###########################################################################
