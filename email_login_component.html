@@ -4,45 +4,46 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <meta name="cfg" content=''>
-  <style>body{text-align:center}input,button{margin:4px;padding:6px}</style>
+  <style>body{text-align:center;font-family:sans-serif}
+         input,button{margin:4px;padding:6px}
+         #msg{color:#d33;font-size:0.9em;min-height:1.2em}</style>
 </head>
 <body>
+  <h4>Email / Anonymous Test</h4>
   <input id="email" placeholder="email">
-  <input id="pw"   type="password" placeholder="password"><br>
+  <input id="pw" type="password" placeholder="password"><br>
   <button onclick="pwLogin()">Sign‑in (PW)</button>
   <button onclick="anon()">Anon</button>
   <p id="msg"></p>
 
 <script>
-/* -------- Firebase init -------- */
+/* ---------- Firebase init ---------- */
 const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
 firebase.initializeApp(cfg);
 const auth = firebase.auth();
 
-/* -------- Email+PW -------- */
+/* ---------- Email + Password ---------- */
 function pwLogin(){
   const em = email.value.trim(), pwVal = pw.value;
-  if(!em){ msg.textContent="email 必須"; return; }
-  if(!pwVal){ msg.textContent="PW が空です"; return; }   /* ★ 追加 */
-
-  auth.signInWithEmailAndPassword(em, pwVal)
+  if(!em || !pwVal){ msg.textContent="email と PW を入力"; return; }
+  auth.signInWithEmailAndPassword(em,pwVal)
       .catch(e=>{
-        if(e.code==="auth/user-not-found"){
-          return auth.createUserWithEmailAndPassword(em, pwVal);  // 自動登録
-        }
-        throw e;
+         if(e.code==="auth/user-not-found"){
+           return auth.createUserWithEmailAndPassword(em,pwVal); // 自動登録
+         }
+         throw e;
       })
       .then(u=>u.user.getIdToken())
-      .then(tok=>window.parent.parent.postMessage({token:tok},"*"))
-      .catch(e=>msg.textContent=e.message);
+      .then(tok=> window.top.postMessage({token:tok},"*"))   /* ★ window.top */
+      .catch(e=> msg.textContent=e.message);
 }
 
-/* -------- Anonymous -------- */
+/* ---------- Anonymous ---------- */
 function anon(){
   auth.signInAnonymously()
       .then(u=>u.user.getIdToken())
-      .then(tok=>window.parent.parent.postMessage({token:tok},"*"))
-      .catch(e=>msg.textContent=e.message);
+      .then(tok=> window.top.postMessage({token:tok},"*"))   /* ★ window.top */
+      .catch(e=> msg.textContent=e.message);
 }
 </script>
 </body></html>
