@@ -1,28 +1,34 @@
-import streamlit as st, os, json
+import os, json, streamlit as st
+from pathlib import Path
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
-from firebase_admin import auth
 
-import os, json, streamlit as st
-from firebase_admin import auth
-from db import insert_record, fetch_by_uid, db     # ★ fetch_by_uid を import
+from firebase_admin import auth, credentials, initialize_app
+from db import insert_record, fetch_by_uid, db      # ← fetch_by_uid は db.py で定義
 from google.cloud import firestore
 from collections import OrderedDict
 
+# ---------- Firebase Admin 初期化 ----------
+if not initialize_app._apps:
+    cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
+    initialize_app(cred)
 
-# ------------ Email/Password / MagicLink ログイン UI ------------
-cfg = os.environ["FIREBASE_WEB_CONFIG"]   # 1行JSON
-components.html(f"""
-<meta name="cfg" content='{cfg}'>
-<iframe src="email_login_component.html"
-        style="border:none;width:260px;height:240px;"></iframe>
-""", height=260)
+# ---------- 認証 UI を埋め込む ----------
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]  # 1行JSON
 
-# ------------ postMessage で token を受け取り session_state に保存 ------------
+# email_login_component.html を読み込んで cfg を差し込む
+html_code = Path("email_login_component.html").read_text()
+html_code = html_code.replace('content=""', f"content='{web_cfg}'", 1)
+
+components.html(html_code, height=320, scrolling=False)
+
+# postMessage で token を受け取る
 token = streamlit_js_eval(
     js_code="""
       window.token = window.token || "";
-      window.addEventListener("message",(e)=>{ if(e.data.token){ window.token=e.data.token; }});
+      window.addEventListener("message", (e) => {
+        if (e.data.token) { window.token = e.data.token; }
+      });
       return window.token;
     """,
     key="token_listener"
@@ -35,45 +41,27 @@ if token and "uid" not in st.session_state:
         st.session_state["email"] = info.get("email")
         st.success(f"ログイン成功: {st.session_state['email']}")
     except Exception as e:
-        st.error("トークン検証失敗: "+str(e))
+        st.error("トークン検証失敗: " + str(e))
 
 if "uid" not in st.session_state:
+    st.warning("ログインしてください")
     st.stop()
 
 uid = st.session_state["uid"]
-
-
-# ------------------------------------------------------
-
-# ────────────────────────── 認証フェーズ ──────────────────────────
 st.title("スタッツ解析アプリ")
 
-
-
-
-if "uid" not in st.session_state:
-    st.warning("ログインが必要です")
-    st.stop()
-
-uid = st.session_state["uid"]
-
 ###########################################################################
-# 1. 入力エリア ─── ゲーム名・ハンド・アクション
+# 1. 入力エリア
 ###########################################################################
-
-# ▼ そのユーザーのレコード全部を一度取得
 records_all = fetch_by_uid(uid)
-
-# ゲームリストを作成
 all_games_initial = sorted({r.get("game", "未分類") for r in records_all})
 GAME_NEW = "＋ 新規ゲームを追加"
 options = [GAME_NEW] + all_games_initial if all_games_initial else [GAME_NEW]
 
-selected_game_opt = st.selectbox("ゲームを選択", options, key="game_select")
+selected_game_opt = st.selectbox("ゲームを選択", options)
 game = st.text_input(
     "新しいゲーム名を入力" if selected_game_opt == GAME_NEW else "ゲーム名",
     value="" if selected_game_opt == GAME_NEW else selected_game_opt,
-    key="game_input",
 )
 
 # --- ハンド169通り ---
@@ -82,18 +70,15 @@ hand_opts = [
     r1 + r2 if i == j else r1 + r2 + "s" if i < j else r2 + r1 + "o"
     for i, r1 in enumerate(ranks) for j, r2 in enumerate(ranks)
 ]
-hand = st.selectbox("ハンドを選択", hand_opts, key="hand_select")
+hand = st.selectbox("ハンドを選択", hand_opts)
 
 preflop_action = st.selectbox(
     "プリフロップアクション",
-    ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"],
-    key="preflop",
+    ["フォールド", "CC", "レイズ", "3bet", "3betコール", "4bet"]
 )
-multiplayer_type = st.radio(
-    "ヘッズアップ or マルチウェイ", ["ヘッズアップ", "マルチウェイ"], key="multi"
-)
+multiplayer_type = st.radio("ヘッズアップ or マルチウェイ", ["ヘッズアップ", "マルチウェイ"])
 
-# --- ポストフロップ入力 ---
+# ポストフロップ入力
 last_raiser = False
 position = ""
 flop = turn = river = "なし"
@@ -102,96 +87,71 @@ turn_type = river_type = ""
 if preflop_action != "フォールド" and multiplayer_type == "ヘッズアップ":
     position = st.selectbox("ポジション", ["IP", "OOP"])
     last_raiser = st.checkbox("プリフロップで自分が最後にレイズした")
+    flop = st.selectbox("フロップアクション",
+        ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
+    if flop not in ["なし","フォールド"]:
+        turn = st.selectbox("ターンアクション",
+            ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
+        if turn in ["ベット","レイズ","3bet"]:
+            turn_type = st.radio("ターンのベットタイプ", ["バリュー","ブラフ"])
+        if turn not in ["なし","フォールド"]:
+            river = st.selectbox("リバーアクション",
+                ["なし","ベット","チェック","レイズ","3bet","フォールド","コール"])
+            if river in ["ベット","レイズ","3bet"]:
+                river_type = st.radio("リバーのベットタイプ", ["バリュー","ブラフ"])
 
-    flop = st.selectbox(
-        "フロップアクション",
-        ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
-    )
-
-    if flop not in ["なし", "フォールド"]:
-        turn = st.selectbox(
-            "ターンアクション",
-            ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
-        )
-        if turn in ["ベット", "レイズ", "3bet"]:
-            turn_type = st.radio("ターンのベットタイプ", ["バリュー", "ブラフ"])
-        if turn not in ["なし", "フォールド"]:
-            river = st.selectbox(
-                "リバーアクション",
-                ["なし", "ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"],
-            )
-            if river in ["ベット", "レイズ", "3bet"]:
-                river_type = st.radio("リバーのベットタイプ", ["バリュー", "ブラフ"])
-
-# --- 保存 ---
+# 保存
 if st.button("ハンドを記録する"):
     if not game:
         st.error("ゲーム名を入力してください")
     else:
-        insert_record(
-            uid,
-            {
-                "game": game,
-                "hand": hand,
-                "preflop": preflop_action,
-                "multiway": multiplayer_type,
-                "position": position,
-                "last_raiser": last_raiser,
-                "flop": flop,
-                "turn": turn,
-                "turn_type": turn_type,
-                "river": river,
-                "river_type": river_type,
-                "timestamp": firestore.SERVER_TIMESTAMP,
-            },
-        )
+        insert_record(uid, {
+            "game": game,
+            "hand": hand,
+            "preflop": preflop_action,
+            "multiway": multiplayer_type,
+            "position": position,
+            "last_raiser": last_raiser,
+            "flop": flop,
+            "turn": turn,
+            "turn_type": turn_type,
+            "river": river,
+            "river_type": river_type,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        })
         st.success("保存しました")
         st.experimental_rerun()
 
 ###########################################################################
 # 2. 記録済みゲームの表示・削除
 ###########################################################################
-
 st.subheader("記録済みゲームの表示")
 
-# Firestore ドキュメントを削除操作で使うので再取得（uid フィルタ済み）
 user_docs = list(
-    db.collection("hands")
-    .where("uid", "==", uid)
-    .order_by("timestamp", direction="DESCENDING")
-    .stream()
+    db.collection("hands").where("uid", "==", uid)
+    .order_by("timestamp", direction="DESCENDING").stream()
 )
+games_ordered = list(OrderedDict((d.to_dict()["game"], None) for d in user_docs))
 
-games_ordered = list(
-    OrderedDict((d.to_dict().get("game", "未分類"), None) for d in user_docs)
-)
-
-view_game = st.selectbox("表示するゲームを選択", games_ordered, key="view_game")
-
-docs_view = [d for d in user_docs if d.to_dict().get("game") == view_game]
+view_game = st.selectbox("表示するゲームを選択", games_ordered)
+docs_view = [d for d in user_docs if d.to_dict()["game"] == view_game]
 records = [d.to_dict() for d in docs_view]
 
-col1, col2 = st.columns([2, 1])
-with col1:
-    if st.button(f"⚠️ 『{view_game}』を全部削除"):
-        for d in docs_view:
-            d.reference.delete()
-        st.success("削除しました")
-        st.experimental_rerun()
+if st.button(f"⚠️ 『{view_game}』を全部削除"):
+    for d in docs_view: d.reference.delete()
+    st.success("削除しました"); st.experimental_rerun()
 
 with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
     for d in docs_view:
-        rec = d.to_dict()
-        st.write(rec)
-        if st.button(f"このハンドを削除（{rec['hand']}）", key=f"del_{d.id}"):
-            d.reference.delete()
-            st.success("削除")
-            st.experimental_rerun()
+        r = d.to_dict(); st.write(r)
+        if st.button(f"このハンドを削除（{r['hand']}）", key=d.id):
+            d.reference.delete(); st.experimental_rerun()
 
 ###########################################################################
-# 3. スタッツ解析（records は uid 限定）
+# 3. スタッツ解析（records を使って計算）
 ###########################################################################
-# 既存のスタッツ計算コードをそのまま利用できます
+# ここに元のスタッツ計算ロジックをそのまま貼り付けてください
+
 
 
 

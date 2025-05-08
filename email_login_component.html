@@ -1,45 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Firebase JS SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+
+  <!-- Python 側で cfg を差し込み -->
   <meta name="cfg" content="">
+
   <style>
-    body{font-family:sans-serif;text-align:center;margin:0;}
-    input{margin:4px;padding:6px;width:200px;}
-    button{padding:6px 12px;margin:6px;}
+    body{font-family:sans-serif;text-align:center;margin:0;padding:0;}
+    input{margin:4px;padding:6px;width:200px;border:1px solid #bbb;border-radius:4px;}
+    button{padding:6px 12px;margin:4px;border:none;border-radius:4px;background:#4285f4;color:#fff;cursor:pointer;}
+    #msg{font-size:0.9em;color:#d33;height:1.2em;margin-top:4px;}
   </style>
 </head>
 <body>
-  <h3>Login</h3>
+  <h4>Email Login</h4>
   <input id="email" type="email" placeholder="Email"><br>
   <input id="pass" type="password" placeholder="Password (任意)"><br>
   <button onclick="login()">Sign‑in</button>
   <button onclick="sendLink()">Magic Link</button>
+  <hr style="width:70%;margin:12px auto">
+  <button style="background:#1d9bf0" onclick="twitterLogin()">Twitter でログイン</button>
   <p id="msg"></p>
 
 <script>
-const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
-firebase.initializeApp(cfg);
-const auth = firebase.auth();
+  // Firebase 初期化
+  const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth();
+  const twitterProvider = new firebase.auth.TwitterAuthProvider();
 
-function login(){
-  const em = email.value, pw = pass.value;
-  if(!em){ msg.textContent="email必須"; return; }
-  (pw ? auth.signInWithEmailAndPassword(em,pw)
-      : auth.signInWithEmailLink(em, window.location.href))
-  .then(r=>r.user.getIdToken())
-  .then(tok=> window.parent.postMessage({token:tok},'*'))
-  .catch(e=> msg.textContent=e.message);
-}
+  // Email + PW or EmailLink
+  function login(){
+    const em = email.value.trim(), pw = pass.value;
+    if(!em){ msg.textContent="Email を入力"; return; }
 
-function sendLink(){
-  const em = email.value;
-  if(!em){ msg.textContent="email必須"; return; }
-  auth.sendSignInLinkToEmail(em,{url:window.location.href,handleCodeInApp:true})
-      .then(()=>msg.textContent="Magicリンク送信しました")
-      .catch(e=>msg.textContent=e.message);
-}
+    const fn = pw ? auth.signInWithEmailAndPassword(em,pw)
+                  : auth.signInWithEmailLink(em, window.location.href);
+
+    fn.then(r=>r.user.getIdToken())
+      .then(tok=> window.parent.parent.postMessage({token: tok}, "*"))
+      .catch(e=> msg.textContent=e.message);
+  }
+
+  // Magic Link 送信
+  function sendLink(){
+    const em = email.value.trim();
+    if(!em){ msg.textContent="Email を入力"; return; }
+    auth.sendSignInLinkToEmail(em,{
+        url: window.location.href,
+        handleCodeInApp: true
+    }).then(()=> msg.textContent="メールを確認してください")
+      .catch(e => msg.textContent=e.message);
+  }
+
+  // Twitter ログイン
+  function twitterLogin(){
+    auth.signInWithPopup(twitterProvider)
+        .then(r=>r.user.getIdToken())
+        .then(tok=> window.parent.parent.postMessage({token: tok}, "*"))
+        .catch(e=> msg.textContent=e.message);
+  }
 </script>
 </body>
 </html>
