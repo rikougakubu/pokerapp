@@ -37,25 +37,37 @@
   const twitterProvider = new firebase.auth.TwitterAuthProvider();
 
   /* ---------- Email login ---------- */
-  function login(){
-    const em = email.value.trim(), pw = pass.value;
-    if(!em){ msg.textContent="Email を入力"; return; }
+function login(){
+  const em = email.value.trim(), pw = pass.value;
+  if(!em){ msg.textContent="Email を入力"; return; }
 
-    (pw ? auth.signInWithEmailAndPassword(em,pw)
-        : auth.signInWithEmailLink(em, location.href))
-    .then(r=>r.user.getIdToken())
+  const fn = pw
+      ? auth.signInWithEmailAndPassword(em,pw)
+          .catch(err=>{
+             if(err.code === "auth/user-not-found"){
+               return auth.createUserWithEmailAndPassword(em,pw);
+             }
+             throw err;
+          })
+      : auth.signInWithEmailLink(em, "https://pokerapp-l57n.onrender.com");
+
+  fn.then(r=>r.user.getIdToken())
     .then(tok=> window.parent.postMessage({token:tok},"*"))
     .catch(e=> msg.textContent=e.message);
-  }
+}
 
   /* ---------- Magic Link ---------- */
-  function sendLink(){
-    const em = email.value.trim();
-    if(!em){ msg.textContent="Email を入力"; return; }
-    auth.sendSignInLinkToEmail(em,{url:location.href,handleCodeInApp:true})
-        .then(()=> msg.textContent="メールを確認してください")
-        .catch(e=> msg.textContent=e.message);
-  }
+/* ---------- Magic Link ---------- */
+function sendLink(){
+  const em = email.value.trim();
+  if(!em){ msg.textContent="Email を入力"; return; }
+  auth.sendSignInLinkToEmail(em,{
+      url: "https://pokerapp-l57n.onrender.com",   // ここを固定
+      handleCodeInApp: true
+  })
+  .then(()=> msg.textContent="メールを確認してください")
+  .catch(e => msg.textContent=e.message);
+}
 
   /* ---------- Twitter ---------- */
   function twitterLogin(){
