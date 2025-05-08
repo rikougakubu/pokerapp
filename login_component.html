@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+    <script>
+      const config = JSON.parse(window.parent.document.querySelector("meta[name=firebase_config]").content);
+      firebase.initializeApp(config);
+      const provider = new firebase.auth.GoogleAuthProvider();
+
+      function signIn(){
+        firebase.auth().signInWithPopup(provider).then(res=>{
+          res.user.getIdToken().then(tok=>{
+            window.parent.postMessage({idToken: tok}, "*");
+          })
+        })
+      }
+    </script>
+  </head>
+  <body style="text-align:center">
+    <button onclick="signIn()">Google でログイン</button>
+  </body>
+</html>
