@@ -4,31 +4,45 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <meta name="cfg" content=''>
-  <style>body{font-family:sans-serif;text-align:center;}input,button{margin:4px;padding:6px;}</style>
+  <style>body{text-align:center}input,button{margin:4px;padding:6px}</style>
 </head>
 <body>
   <input id="email" placeholder="email">
-  <input id="pw" type="password" placeholder="pw">
-  <button onclick="pw()">PW login</button>
+  <input id="pw"   type="password" placeholder="password"><br>
+  <button onclick="pwLogin()">Sign‑in (PW)</button>
   <button onclick="anon()">Anon</button>
   <p id="msg"></p>
+
 <script>
+/* -------- Firebase init -------- */
 const cfg = JSON.parse(document.querySelector('meta[name=cfg]').content);
 firebase.initializeApp(cfg);
 const auth = firebase.auth();
 
-function pw(){
-  auth.signInWithEmailAndPassword(email.value,pw.value)
-      .catch(e=>{ if(e.code==="auth/user-not-found")
-          return auth.createUserWithEmailAndPassword(email.value,pw.value); throw e; })
+/* -------- Email+PW -------- */
+function pwLogin(){
+  const em = email.value.trim(), pwVal = pw.value;
+  if(!em){ msg.textContent="email 必須"; return; }
+  if(!pwVal){ msg.textContent="PW が空です"; return; }   /* ★ 追加 */
+
+  auth.signInWithEmailAndPassword(em, pwVal)
+      .catch(e=>{
+        if(e.code==="auth/user-not-found"){
+          return auth.createUserWithEmailAndPassword(em, pwVal);  // 自動登録
+        }
+        throw e;
+      })
       .then(u=>u.user.getIdToken())
-      .then(t=>window.parent.postMessage({token:t},"*"))
+      .then(tok=>window.parent.postMessage({token:tok},"*"))
       .catch(e=>msg.textContent=e.message);
 }
+
+/* -------- Anonymous -------- */
 function anon(){
   auth.signInAnonymously()
       .then(u=>u.user.getIdToken())
-      .then(t=>window.parent.postMessage({token:t},"*"))
+      .then(tok=>window.parent.postMessage({token:tok},"*"))
       .catch(e=>msg.textContent=e.message);
 }
-</script></body></html>
+</script>
+</body></html>
