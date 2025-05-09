@@ -11,8 +11,19 @@ if not firebase_admin._apps:
 
 st.title("スタッツ解析アプリ")
 
-html_url = "https://auth-ui-app.onrender.com/email_login_component.html"
-components.iframe(html_url, height=420)
+#web_cfg = os.environ["FIREBASE_WEB_CONFIG"]  # 1行JSON
+
+#html_code = Path("email_login_component.html").read_text()
+#html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
+
+#components.html(html_code, height=360, scrolling=False)
+
+
+AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
+components.iframe(AUTH_UI_URL, height=360, scrolling=False)
+
+
+
 
 # JS listener
 token = streamlit_js_eval(
