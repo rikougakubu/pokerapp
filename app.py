@@ -217,7 +217,7 @@ if token and "uid" not in st.session_state:
         st.error("認証失敗: " + str(e))
 
 # --- 管理者パスワードによるログイン（Firebase不要）---
-ADMIN_PASSWORD = "0127"
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 if "uid" not in st.session_state:
     st.subheader("Firebaseログインが使えない場合の管理者ログイン")
     pw = st.text_input("管理者パスワードを入力（外部には非公開）", type="password")
