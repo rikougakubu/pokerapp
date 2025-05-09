@@ -20,3 +20,10 @@ def insert_record(uid: str, record: dict):
 def fetch_by_uid(uid: str) -> list:
     docs = db.collection("hands").where("uid", "==", uid).stream()
     return [doc.to_dict() for doc in docs]
+
+
+def fetch_by_game(uid: str, game: str) -> list:
+    docs = db.collection("hands")\
+             .where("uid", "==", uid)\
+             .where("game", "==", game).stream()
+    return [doc.to_dict() for doc in docs]
