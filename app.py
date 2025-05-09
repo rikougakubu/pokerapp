@@ -11,16 +11,10 @@ if not firebase_admin._apps:
 
 st.title("スタッツ解析アプリ")
 
-#web_cfg = os.environ["FIREBASE_WEB_CONFIG"]  # 1行JSON
-
-#html_code = Path("email_login_component.html").read_text()
-#html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
-
-#components.html(html_code, height=360, scrolling=False)
-
-
-AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
-components.iframe(AUTH_UI_URL, height=360, scrolling=False)
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
+html_code = Path("email_login_component.html").read_text()
+html_code = html_code.replace("content=''", f"content='{web_cfg}'", 1)
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
 
 
