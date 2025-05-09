@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- Firebase SDK（Compat版） -->
+  <meta charset="UTF-8">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-  <!-- Firebase Web Config を Python 側から挿入 -->
   <meta name="cfg" content='{"apiKey":"AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto","authDomain":"poker-stats-prod.firebaseapp.com","projectId":"poker-stats-prod","storageBucket":"poker-stats-prod.firebasestorage.app","messagingSenderId":"366474801487","appId":"1:366474801487:web:f1611e8a49db791b67953a"}'>
-
   <style>
     body { font-family: sans-serif; text-align: center; padding: 14px; }
     input, button { margin: 4px; padding: 6px; border-radius: 4px; }
@@ -17,8 +14,6 @@
 </head>
 <body>
   <h4>Email / Phone Login</h4>
-
-  <!-- Emailログイン -->
   <input id="email" type="email" placeholder="Email"><br>
   <input id="pass" type="password" placeholder="Password(任意)"><br>
   <button onclick="pwLogin()" style="background:#4285f4">Sign-in (PW)</button>
@@ -26,36 +21,33 @@
 
   <hr style="width:70%">
 
-  <!-- SMSログイン -->
-  <input id="phone" type="tel" placeholder="+81xxxxxxxxxx"><br>
+  <input id="phone" type="tel" placeholder="080xxxxxxx"><br>
   <button onclick="sendSMS()" style="background:#34a853">SMS 送信</button>
   <input id="otp" type="text" placeholder="確認コード" style="width:120px;">
   <button onclick="verifySMS()" style="background:#34a853">Verify</button>
 
   <hr style="width:70%">
 
-  <!-- 他のログイン方法 -->
   <button onclick="twitterLogin()" style="background:#1da1f2">Twitterでログイン</button>
   <button onclick="anonLogin()" style="background:#555">匿名でログイン</button>
 
   <div id="recaptcha-container" style="display:none"></div>
   <p id="msg"></p>
 
+  <!-- ✅ JavaScript は <body> の最後で読み込む -->
   <script>
-    let auth, recaptcha;
+    let auth, recaptcha, confirmationResult;
     try {
       const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
       firebase.initializeApp(cfg);
       auth = firebase.auth();
       recaptcha = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
     } catch (e) {
-      const msgEl = document.getElementById("msg");
-      if (msgEl) msgEl.textContent = "⚠ Firebase 初期化失敗";
+      document.getElementById("msg").textContent = "⚠ Firebase 初期化失敗";
       console.error(e);
     }
 
     const twitterProvider = new firebase.auth.TwitterAuthProvider();
-    let confirmationResult = null;
 
     function pwLogin() {
       const em = email.value.trim(), pw = pass.value;
@@ -77,15 +69,14 @@
       if (!em) return msg.textContent = "Emailを入力してください";
       localStorage.setItem("link_email_for_login", em);
       auth.sendSignInLinkToEmail(em, {
-        url: "https://auth-ui-app.onrender.com/email_login_component.html",  // ✅ HTML自身を戻り先に
+        url: "https://pokerapp-l57n.onrender.com",
         handleCodeInApp: true
       }).then(() => msg.textContent = "メールを確認してください")
         .catch(e => msg.textContent = e.message);
     }
 
-
     window.addEventListener("DOMContentLoaded", () => {
-      if (auth.isSignInWithEmailLink(location.href)) {
+      if (auth && auth.isSignInWithEmailLink(location.href)) {
         const em = localStorage.getItem("link_email_for_login") || prompt("Emailを入力してください");
         if (!em) return;
         auth.signInWithEmailLink(em, location.href)
@@ -101,11 +92,7 @@
     function sendSMS() {
       let ph = phone.value.trim();
       if (!ph) return msg.textContent = "電話番号を入力してください";
-
-      # 080, 090 など日本形式を +81 に変換（自動処理）
-      if (ph.startsWith("0")) {
-        ph = "+81" + ph.slice(1);
-      }
+      if (ph.startsWith("0")) ph = "+81" + ph.slice(1);
 
       auth.signInWithPhoneNumber(ph, recaptcha)
         .then(res => {
