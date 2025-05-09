@@ -1,43 +1,66 @@
-<script>
-  let auth = null;
-  let confirmationResult = null;
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Firebase SDK（Compat版） -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-  // Firebase 初期化と依存オブジェクトの定義
-  window.addEventListener("DOMContentLoaded", () => {
+  <!-- Firebase Web Config を Python 側から挿入 -->
+  <meta name="cfg" content=''>
+
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 14px; }
+    input, button { margin: 4px; padding: 6px; border-radius: 4px; }
+    button { border: none; color: white; cursor: pointer; }
+    #msg { color: #d33; font-size: 0.9em; height: 1.2em; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h4>Email / Phone Login</h4>
+
+  <!-- Emailログイン -->
+  <input id="email" type="email" placeholder="Email"><br>
+  <input id="pass" type="password" placeholder="Password(任意)"><br>
+  <button onclick="pwLogin()" style="background:#4285f4">Sign-in (PW)</button>
+  <button onclick="sendLink()" style="background:#4285f4">Magic Link</button>
+
+  <hr style="width:70%">
+
+  <!-- SMSログイン -->
+  <input id="phone" type="tel" placeholder="+81xxxxxxxxxx"><br>
+  <button onclick="sendSMS()" style="background:#34a853">SMS 送信</button>
+  <input id="otp" type="text" placeholder="確認コード" style="width:120px;">
+  <button onclick="verifySMS()" style="background:#34a853">Verify</button>
+
+  <hr style="width:70%">
+
+  <!-- 他のログイン方法 -->
+  <button onclick="twitterLogin()" style="background:#1da1f2">Twitterでログイン</button>
+  <button onclick="anonLogin()" style="background:#555">匿名でログイン</button>
+
+  <div id="recaptcha-container" style="display:none"></div>
+  <p id="msg"></p>
+
+  <script>
+    let auth, recaptcha;
     try {
       const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
       firebase.initializeApp(cfg);
       auth = firebase.auth();
-
-      // Recaptcha は初期化後に生成
-      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
-        size: "invisible"
-      });
-
-      // Email Link によるログイン
-      if (auth.isSignInWithEmailLink(location.href)) {
-        const em = localStorage.getItem("link_email_for_login") || prompt("Email 入力");
-        if (!em) return;
-        auth.signInWithEmailLink(em, location.href)
-            .then(r => r.user.getIdToken())
-            .then(tok => {
-              localStorage.removeItem("link_email_for_login");
-              window.parent.postMessage({ token: tok }, "*");
-            })
-            .catch(e => msg.textContent = e.message);
-      }
-
+      recaptcha = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
     } catch (e) {
-      document.getElementById("msg").textContent = "⚠ Firebase config 読み込み失敗: " + e.message;
+      const msgEl = document.getElementById("msg");
+      if (msgEl) msgEl.textContent = "⚠ Firebase 初期化失敗";
+      console.error(e);
     }
-  });
 
-  // 以下の関数は auth が初期化された後で使えるように定義
-  function pwLogin() {
-    if (!auth) return msg.textContent = "auth 未初期化";
-    const em = email.value.trim(), pw = pass.value;
-    if (!em || !pw) return msg.textContent = "Email と PW を入力";
-    auth.signInWithEmailAndPassword(em, pw)
+    const twitterProvider = new firebase.auth.TwitterAuthProvider();
+    let confirmationResult = null;
+
+    function pwLogin() {
+      const em = email.value.trim(), pw = pass.value;
+      if (!em || !pw) return msg.textContent = "EmailとPWを入力してください";
+      auth.signInWithEmailAndPassword(em, pw)
         .catch(err => {
           if (err.code === "auth/user-not-found") {
             return auth.createUserWithEmailAndPassword(em, pw);
@@ -47,55 +70,65 @@
         .then(r => r.user.getIdToken())
         .then(tok => window.parent.postMessage({ token: tok }, "*"))
         .catch(e => msg.textContent = e.message);
-  }
+    }
 
-  function sendLink() {
-    if (!auth) return msg.textContent = "auth 未初期化";
-    const em = email.value.trim();
-    if (!em) return msg.textContent = "Email を入力";
-    localStorage.setItem("link_email_for_login", em);
-    auth.sendSignInLinkToEmail(em, {
-      url: "https://pokerapp-l57n.onrender.com",
-      handleCodeInApp: true
-    })
-    .then(() => msg.textContent = "メールを確認してください")
-    .catch(e => msg.textContent = e.message);
-  }
+    function sendLink() {
+      const em = email.value.trim();
+      if (!em) return msg.textContent = "Emailを入力してください";
+      localStorage.setItem("link_email_for_login", em);
+      auth.sendSignInLinkToEmail(em, {
+        url: "https://pokerapp-l57n.onrender.com",
+        handleCodeInApp: true
+      }).then(() => msg.textContent = "メールを確認してください")
+        .catch(e => msg.textContent = e.message);
+    }
 
-  function sendSMS() {
-    if (!auth || !window.recaptchaVerifier) return msg.textContent = "認証未初期化";
-    const ph = phone.value.trim();
-    if (!ph) return msg.textContent = "電話番号を入力";
-    auth.signInWithPhoneNumber(ph, window.recaptchaVerifier)
+    window.addEventListener("DOMContentLoaded", () => {
+      if (auth.isSignInWithEmailLink(location.href)) {
+        const em = localStorage.getItem("link_email_for_login") || prompt("Emailを入力してください");
+        if (!em) return;
+        auth.signInWithEmailLink(em, location.href)
+          .then(r => r.user.getIdToken())
+          .then(tok => {
+            localStorage.removeItem("link_email_for_login");
+            window.parent.postMessage({ token: tok }, "*");
+          })
+          .catch(e => msg.textContent = e.message);
+      }
+    });
+
+    function sendSMS() {
+      const ph = phone.value.trim();
+      if (!ph) return msg.textContent = "電話番号を入力してください";
+      auth.signInWithPhoneNumber(ph, recaptcha)
         .then(res => {
           confirmationResult = res;
-          msg.textContent = "SMS 送信済み";
+          msg.textContent = "SMS送信済み。コードを入力してください";
         })
         .catch(e => msg.textContent = e.message);
-  }
+    }
 
-  function verifySMS() {
-    if (!confirmationResult) return msg.textContent = "先に SMS を送信";
-    confirmationResult.confirm(otp.value.trim())
+    function verifySMS() {
+      if (!confirmationResult) return msg.textContent = "まずSMSを送信してください";
+      confirmationResult.confirm(otp.value.trim())
         .then(r => r.user.getIdToken())
         .then(tok => window.parent.postMessage({ token: tok }, "*"))
         .catch(e => msg.textContent = e.message);
-  }
+    }
 
-  function twitterLogin() {
-    if (!auth) return msg.textContent = "auth 未初期化";
-    const twitterProvider = new firebase.auth.TwitterAuthProvider();
-    auth.signInWithPopup(twitterProvider)
+    function twitterLogin() {
+      auth.signInWithPopup(twitterProvider)
         .then(r => r.user.getIdToken())
         .then(tok => window.parent.postMessage({ token: tok }, "*"))
         .catch(e => msg.textContent = e.message);
-  }
+    }
 
-  function anonLogin() {
-    if (!auth) return msg.textContent = "auth 未初期化";
-    auth.signInAnonymously()
+    function anonLogin() {
+      auth.signInAnonymously()
         .then(r => r.user.getIdToken())
         .then(tok => window.parent.postMessage({ token: tok }, "*"))
         .catch(e => msg.textContent = e.message);
-  }
-</script>
+    }
+  </script>
+</body>
+</html>
