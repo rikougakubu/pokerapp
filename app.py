@@ -13,57 +13,6 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- タイトル ---
-st.set_page_config(page_title="スタッツ解析", layout="centered")
-st.title("スタッツ解析アプリ")
-
-# --- 認証 UI を iframe で表示 ---
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
-components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
-
-# --- トークン受信 (JS 経由で postMessage) ---
-token = streamlit_js_eval(
-    js_code="""
-    window.token = window.token || "";
-    window.addEventListener("message",(e)=>{
-        if(e.data.token){ window.token = e.data.token; }
-    });
-    return window.token;
-    """,
-    key="token_listener"
-)
-
-# --- Firebase ID トークン検証 ---
-if token and "uid" not in st.session_state:
-    try:
-        info = auth.verify_id_token(token)
-        st.session_state["uid"] = info["uid"]
-        st.session_state["email"] = info.get("email", "")
-        st.success("ログイン成功: " + st.session_state["email"])
-    except Exception as e:
-        st.error("認証失敗: " + str(e))
-
-# --- 管理者パスワードによるログイン（Firebase不要）---
-ADMIN_PASSWORD = "0127"
-if "uid" not in st.session_state:
-    st.subheader("⚠ Firebaseログインが使えない場合の管理者ログイン")
-    pw = st.text_input("管理者パスワードを入力（外部には非公開）", type="password")
-    if st.button("管理者ログイン"):
-        if pw == ADMIN_PASSWORD:
-            st.session_state["uid"] = "admin"
-            st.session_state["email"] = "admin@example.com"
-            st.success("管理者ログイン成功")
-        else:
-            st.error("パスワードが違います")
-    st.stop()
-
-# --- メインアプリ実行 ---
-uid = st.session_state["uid"]
-main_app(uid)
-
-
-
-
 def main_app(uid):
     st.header("🎮 ハンド記録")
 
@@ -228,3 +177,57 @@ def main_app(uid):
         st.markdown(f"- フロップコール→ターンコール/レイズ率: {turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base:.1%} ({turn_call_raise_after_flop_call}/{turn_call_raise_after_flop_call_base})" if turn_call_raise_after_flop_call_base else "- フロップコール→ターンコール/レイズ率: なし")
         st.markdown(f"- ターンベット→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
         st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
+
+
+
+# --- タイトル ---
+st.set_page_config(page_title="スタッツ解析", layout="centered")
+st.title("スタッツ解析アプリ")
+
+# --- 認証 UI を iframe で表示 ---
+web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
+
+# --- トークン受信 (JS 経由で postMessage) ---
+token = streamlit_js_eval(
+    js_code="""
+    window.token = window.token || "";
+    window.addEventListener("message",(e)=>{
+        if(e.data.token){ window.token = e.data.token; }
+    });
+    return window.token;
+    """,
+    key="token_listener"
+)
+
+# --- Firebase ID トークン検証 ---
+if token and "uid" not in st.session_state:
+    try:
+        info = auth.verify_id_token(token)
+        st.session_state["uid"] = info["uid"]
+        st.session_state["email"] = info.get("email", "")
+        st.success("ログイン成功: " + st.session_state["email"])
+    except Exception as e:
+        st.error("認証失敗: " + str(e))
+
+# --- 管理者パスワードによるログイン（Firebase不要）---
+ADMIN_PASSWORD = "0127"
+if "uid" not in st.session_state:
+    st.subheader("⚠ Firebaseログインが使えない場合の管理者ログイン")
+    pw = st.text_input("管理者パスワードを入力（外部には非公開）", type="password")
+    if st.button("管理者ログイン"):
+        if pw == ADMIN_PASSWORD:
+            st.session_state["uid"] = "admin"
+            st.session_state["email"] = "admin@example.com"
+            st.success("管理者ログイン成功")
+        else:
+            st.error("パスワードが違います")
+    st.stop()
+
+# --- メインアプリ実行 ---
+uid = st.session_state["uid"]
+main_app(uid)
+
+
+
+
