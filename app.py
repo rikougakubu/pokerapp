@@ -14,7 +14,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 def main_app(uid):
-    st.header("🎮 ハンド記録")
+    st.header("ハンド記録")
 
     # 既存ゲーム取得
     records_all = fetch_by_uid(uid)
@@ -84,7 +84,7 @@ def main_app(uid):
             st.rerun()
 
     # 表示・削除
-    st.subheader("📝 記録済みゲーム")
+    st.subheader("記録済みゲーム")
     user_docs = list(
         db.collection("hands").where("uid", "==", uid)
         .order_by("timestamp", direction="DESCENDING").stream()
@@ -94,7 +94,7 @@ def main_app(uid):
     docs_view = [d for d in user_docs if d.to_dict()["game"] == view_game]
     records = [d.to_dict() for d in docs_view]
 
-    if st.button(f"⚠️ 『{view_game}』を全部削除"):
+    if st.button(f"『{view_game}』を全部削除"):
         for d in docs_view: d.reference.delete()
         st.success("削除しました"); st.rerun()
 
@@ -107,7 +107,7 @@ def main_app(uid):
     # ─────────────────────────────
     # 統計セクション
     # ─────────────────────────────
-    st.subheader(f"📊 『{view_game}』の統計")
+    st.subheader(f"『{view_game}』の統計")
     total = len(records)
     vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
     pfr = sum(1 for r in records if r.get("preflop") in ["レイズ", "3bet", "4bet"])
@@ -219,7 +219,7 @@ if token and "uid" not in st.session_state:
 # --- 管理者パスワードによるログイン（Firebase不要）---
 ADMIN_PASSWORD = "0127"
 if "uid" not in st.session_state:
-    st.subheader("⚠ Firebaseログインが使えない場合の管理者ログイン")
+    st.subheader("Firebaseログインが使えない場合の管理者ログイン")
     pw = st.text_input("管理者パスワードを入力（外部には非公開）", type="password")
     if st.button("管理者ログイン"):
         if pw == ADMIN_PASSWORD:

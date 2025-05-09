@@ -77,11 +77,12 @@
       if (!em) return msg.textContent = "Emailを入力してください";
       localStorage.setItem("link_email_for_login", em);
       auth.sendSignInLinkToEmail(em, {
-        url: "https://pokerapp-l57n.onrender.com",
+        url: "https://auth-ui-app.onrender.com/email_login_component.html",  // ✅ HTML自身を戻り先に
         handleCodeInApp: true
       }).then(() => msg.textContent = "メールを確認してください")
         .catch(e => msg.textContent = e.message);
     }
+
 
     window.addEventListener("DOMContentLoaded", () => {
       if (auth.isSignInWithEmailLink(location.href)) {
@@ -98,8 +99,14 @@
     });
 
     function sendSMS() {
-      const ph = phone.value.trim();
+      let ph = phone.value.trim();
       if (!ph) return msg.textContent = "電話番号を入力してください";
+
+      # 080, 090 など日本形式を +81 に変換（自動処理）
+      if (ph.startsWith("0")) {
+        ph = "+81" + ph.slice(1);
+      }
+
       auth.signInWithPhoneNumber(ph, recaptcha)
         .then(res => {
           confirmationResult = res;
