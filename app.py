@@ -81,7 +81,7 @@ def main_app(uid):
                 "timestamp": firestore.SERVER_TIMESTAMP,
             })
             st.success("保存しました")
-            st.experimental_rerun()
+            st.rerun()
 
     # 表示・削除
     st.subheader("📝 記録済みゲーム")
@@ -96,13 +96,13 @@ def main_app(uid):
 
     if st.button(f"⚠️ 『{view_game}』を全部削除"):
         for d in docs_view: d.reference.delete()
-        st.success("削除しました"); st.experimental_rerun()
+        st.success("削除しました"); st.rerun()
 
     with st.expander(f"『{view_game}』のハンド一覧 ({len(records)}件)"):
         for d in docs_view:
             r = d.to_dict(); st.write(r)
             if st.button(f"このハンドを削除（{r['hand']}）", key=d.id):
-                d.reference.delete(); st.experimental_rerun()
+                d.reference.delete(); st.rerun()
 
     # ─────────────────────────────
     # 統計セクション
@@ -185,8 +185,14 @@ st.set_page_config(page_title="スタッツ解析", layout="centered")
 st.title("スタッツ解析アプリ")
 
 # --- 認証 UI を iframe で表示 ---
+
 web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
-components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
+
+# --- 認証 UI（ログインしてないときだけ表示）---
+if "uid" not in st.session_state:
+    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
+    components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
+
 
 # --- トークン受信 (JS 経由で postMessage) ---
 token = streamlit_js_eval(
