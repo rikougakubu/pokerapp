@@ -234,5 +234,4 @@ if "uid" not in st.session_state:
 
 # --- ログイン後メインアプリ実行 ---
 uid = st.session_state["uid"]
-from main_app import main_app
 main_app(uid)
