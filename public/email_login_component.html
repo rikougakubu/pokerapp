@@ -13,128 +13,34 @@
   </style>
 </head>
 <body>
-  <h4>Email / Phone Login</h4>
-  <input id="email" type="email" placeholder="Email"><br>
-  <input id="pass" type="password" placeholder="Password(任意)"><br>
-  <button onclick="pwLogin()" style="background:#4285f4">Sign-in (PW)</button>
-  <button onclick="sendLink()" style="background:#4285f4">Magic Link</button>
+  <h4>ログイン</h4>
 
-  <hr style="width:70%">
-
-  <input id="phone" type="tel" placeholder="080xxxxxxx"><br>
-  <button onclick="sendSMS()" style="background:#34a853">SMS 送信</button>
-  <input id="otp" type="text" placeholder="確認コード" style="width:120px;">
-  <button onclick="verifySMS()" style="background:#34a853">Verify</button>
-
-  <hr style="width:70%">
-
-  <button onclick="twitterLogin()" style="background:#1da1f2">Twitterでログイン</button>
-  <button onclick="anonLogin()" style="background:#555">匿名でログイン</button>
+  <!-- Googleログインボタン -->
   <button onclick="googleLogin()" style="background:#db4437">Googleでログイン</button>
-  <div id="recaptcha-container" style="display:none"></div>
+
   <p id="msg"></p>
 
-  <!-- ✅ JavaScript は <body> の最後で読み込む -->
   <script>
-    let auth, recaptcha, confirmationResult;
+    let auth;
     try {
       const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
       firebase.initializeApp(cfg);
       auth = firebase.auth();
-      recaptcha = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
     } catch (e) {
       document.getElementById("msg").textContent = "⚠ Firebase 初期化失敗";
       console.error(e);
-    }
-
-    const twitterProvider = new firebase.auth.TwitterAuthProvider();
-
-    function pwLogin() {
-      const em = email.value.trim(), pw = pass.value;
-      if (!em || !pw) return msg.textContent = "EmailとPWを入力してください";
-      auth.signInWithEmailAndPassword(em, pw)
-        .catch(err => {
-          if (err.code === "auth/user-not-found") {
-            return auth.createUserWithEmailAndPassword(em, pw);
-          }
-          throw err;
-        })
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function sendLink() {
-      const em = email.value.trim();
-      if (!em) return msg.textContent = "Emailを入力してください";
-      localStorage.setItem("link_email_for_login", em);
-      auth.sendSignInLinkToEmail(em, {
-        url: "https://pokerapp-l57n.onrender.com",
-        handleCodeInApp: true
-      }).then(() => msg.textContent = "メールを確認してください")
-        .catch(e => msg.textContent = e.message);
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      if (auth && auth.isSignInWithEmailLink(location.href)) {
-        const em = localStorage.getItem("link_email_for_login") || prompt("Emailを入力してください");
-        if (!em) return;
-        auth.signInWithEmailLink(em, location.href)
-          .then(r => r.user.getIdToken())
-          .then(tok => {
-            localStorage.removeItem("link_email_for_login");
-            window.parent.postMessage({ token: tok }, "*");
-          })
-          .catch(e => msg.textContent = e.message);
-      }
-    });
-
-    function sendSMS() {
-      let ph = phone.value.trim();
-      if (!ph) return msg.textContent = "電話番号を入力してください";
-      if (ph.startsWith("0")) ph = "+81" + ph.slice(1);
-
-      auth.signInWithPhoneNumber(ph, recaptcha)
-        .then(res => {
-          confirmationResult = res;
-          msg.textContent = "SMS送信済み。コードを入力してください";
-        })
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function verifySMS() {
-      if (!confirmationResult) return msg.textContent = "まずSMSを送信してください";
-      confirmationResult.confirm(otp.value.trim())
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function twitterLogin() {
-      auth.signInWithPopup(twitterProvider)
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
-    }
-
-    function anonLogin() {
-      auth.signInAnonymously()
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
     }
 
     const googleProvider = new firebase.auth.GoogleAuthProvider();
 
     function googleLogin() {
       auth.signInWithPopup(googleProvider)
-      .then(r => r.user.getIdToken())
-      .then(tok => {
-        // ✅ トークンを URL に追加して遷移
-        const url = "https://pokerapp-l57n.onrender.com/?token=" + encodeURIComponent(tok);
-        window.location.href = url;
-      })
-      .catch(e => msg.textContent = e.message);
+        .then(r => r.user.getIdToken())
+        .then(tok => {
+          const url = "https://pokerapp-l57n.onrender.com/?token=" + encodeURIComponent(tok);
+          window.location.href = url;
+        })
+        .catch(e => msg.textContent = e.message);
     }
   </script>
 </body>
