@@ -220,7 +220,6 @@ if token_from_url:
         st.stop()
 
 # --- ログインフォーム表示 ---
-st.set_page_config(page_title="スタッツ解析", layout="centered")
 st.title("スタッツ解析アプリ")
 
 iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
