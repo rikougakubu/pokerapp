@@ -213,6 +213,7 @@ if token and "uid" not in st.session_state:
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
         st.success("ログイン成功: " + st.session_state["email"])
+        main_app(st.session_state["uid"])
     except Exception as e:
         st.error("認証失敗: " + str(e))
 
