@@ -179,20 +179,15 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- ページ設定（必ず最初に呼び出す） ---
 st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- ログイン済みなら即メイン画面 ---
+# --- ログイン済みならメインアプリ実行 ---
 if "uid" in st.session_state:
     st.title("スタッツ解析アプリ")
     main_app(st.session_state["uid"])
     st.stop()
 
-# --- query param から token を受信 ---
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
-
-# --- postMessage で token を iframe から受信して URL に渡す ---
+# --- トークン取得用 JS (postMessage → URL)
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
@@ -207,7 +202,10 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- トークン検証 ---
+# --- URL からトークンを取得して検証 ---
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
+
 if token_from_url:
     try:
         info = auth.verify_id_token(token_from_url)
@@ -219,13 +217,10 @@ if token_from_url:
         st.error("認証失敗: " + str(e))
         st.stop()
 
-# --- 未ログイン状態：ログインUI表示 ---
-st.title("スタッツ解析アプリ")
+# --- 未ログインなら：ログイン UI 表示 ---
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-# ✅ login.html の Googleログイン専用画面を使用
-components.iframe("https://auth-ui-app.onrender.com/login.html", height=200)
-
-# --- 管理者ログイン ---
+# --- 管理者ログインフォーム（Firebaseなし用） ---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 st.subheader("管理者ログイン")
 pw = st.text_input("管理者パスワードを入力", type="password")

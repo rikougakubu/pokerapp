@@ -4,54 +4,68 @@
   <meta charset="UTF-8">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <meta name="cfg" content='<!-- あなたの Firebase Web Config をここに挿入 -->'>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="cfg" content='{"apiKey":"AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto","authDomain":"poker-stats-prod.firebaseapp.com","projectId":"poker-stats-prod","storageBucket":"poker-stats-prod.firebasestorage.app","messagingSenderId":"366474801487","appId":"1:366474801487:web:f1611e8a49db791b67953a"}'>
   <style>
     body {
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      min-height: 100vh;
-      background-color: #111;
-      color: white;
+      text-align: center;
+      padding: 14px;
+      margin-top: 40px;
+    }
+    input, button {
+      margin: 6px;
+      padding: 8px;
+      border-radius: 4px;
     }
     button {
-      font-size: 1.2em;
-      padding: 12px 24px;
-      background-color: #db4437;
-      color: white;
       border: none;
-      border-radius: 6px;
-      margin: 12px;
+      color: white;
       cursor: pointer;
     }
-    h2 {
-      margin-bottom: 20px;
+    #msg {
+      color: #d33;
+      font-size: 0.9em;
+      height: 1.2em;
+      margin-top: 6px;
     }
   </style>
 </head>
 <body>
-  <h2>スタッツ解析アプリ ログイン</h2>
-  <button onclick="googleLogin()">Googleでログイン</button>
+  <button onclick="googleLogin()" style="background:#db4437; font-size: 16px; padding: 12px 20px;">Googleでログイン</button>
+
+  <hr style="width:70%">
+
+  <h3>管理者ログイン</h3>
+  <input id="admin_pass" type="password" placeholder="管理者パスワードを入力">
+  <button onclick="adminLogin()" style="background:#555">管理者ログイン</button>
+
+  <p id="msg"></p>
 
   <script>
-    const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
-    firebase.initializeApp(cfg);
-    const auth = firebase.auth();
-    const googleProvider = new firebase.auth.GoogleAuthProvider();
+    let auth;
+    try {
+      const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
+      firebase.initializeApp(cfg);
+      auth = firebase.auth();
+    } catch (e) {
+      document.getElementById("msg").textContent = "⚠ Firebase 初期化失敗";
+      console.error(e);
+    }
 
     function googleLogin() {
-      auth.signInWithPopup(googleProvider)
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
         .then(r => r.user.getIdToken())
         .then(tok => {
-          const url = window.location.origin + "/?token=" + encodeURIComponent(tok);
-          window.location.href = url;
+          window.parent.postMessage({ token: tok }, "*");
         })
-        .catch(e => alert("ログイン失敗: " + e.message));
+        .catch(e => msg.textContent = e.message);
+    }
+
+    function adminLogin() {
+      const pass = document.getElementById("admin_pass").value;
+      if (!pass) return msg.textContent = "パスワードを入力してください";
+      window.parent.postMessage({ admin_pass: pass }, "*");
     }
   </script>
 </body>
