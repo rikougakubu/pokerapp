@@ -6,18 +6,33 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <meta name="cfg" content='{"apiKey":"AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto","authDomain":"poker-stats-prod.firebaseapp.com","projectId":"poker-stats-prod","storageBucket":"poker-stats-prod.firebasestorage.app","messagingSenderId":"366474801487","appId":"1:366474801487:web:f1611e8a49db791b67953a"}'>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 14px; }
-    input, button { margin: 4px; padding: 6px; border-radius: 4px; }
-    button { border: none; color: white; cursor: pointer; }
-    #msg { color: #d33; font-size: 0.9em; height: 1.2em; margin-top: 6px; }
+    body { font-family: sans-serif; text-align: center; padding: 40px; }
+    #googleBtn {
+      background: #db4437;
+      color: white;
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    #msg {
+      color: #d33;
+      font-size: 0.9em;
+      height: 1.2em;
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
-  <h4>ログイン</h4>
+  <h2>スタッツ解析アプリ</h2>
+  <p><strong>ログイン</strong></p>
 
-  <!-- Googleログインボタン -->
-  <button onclick="googleLogin()" style="background:#db4437">Googleでログイン</button>
+  <!-- Googleログイン -->
+  <button onclick="googleLogin()" id="googleBtn">Googleでログイン</button>
 
+  <div id="recaptcha-container" style="display:none"></div>
   <p id="msg"></p>
 
   <script>
