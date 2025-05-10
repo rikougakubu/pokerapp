@@ -174,6 +174,109 @@ def main_app(uid):
         st.markdown(f"- ターンベット→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
         st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
 
+
+        # PFR
+        if pfr / total <= 0.09:
+            st.caption("Pre Flop Raiseを増やしてください（適正値10～20％）")
+        elif pfr / total >= 0.21:
+            st.caption("Pre Flop Raiseを減らして下さい（適正値10～20％）")
+
+        # 3bet
+        if three_bet / total <= 0.05:
+            st.caption("3betを増やして下さい（適正値6～9％）")
+        elif three_bet / total >= 0.10:
+            st.caption("3betを減らして下さい（適正値6～9％）")
+
+        # Flop CB IP
+        if flop_cb_ip_base:
+            rate = flop_cb_ip / flop_cb_ip_base
+            if rate <= 0.59:
+                st.caption("Flop CB(IP)を増やして下さい（適正値60～75％）")
+            elif rate >= 0.76:
+                st.caption("Flop CB(IP)を減らして下さい（適正値60～75％）")
+
+        # Flop CB OOP
+        if flop_cb_oop_base:
+            rate = flop_cb_oop / flop_cb_oop_base
+            if rate <= 0.29:
+                st.caption("Flop CB (OOP)を増やして下さい（適正値30～50％）")
+            elif rate >= 0.51:
+                st.caption("Flop CB (OOP)を減らして下さい（適正値30～50％）")
+
+        # Turn CB IP
+        if turn_cb_ip_base:
+            rate = turn_cb_ip / turn_cb_ip_base
+            if rate <= 0.39:
+                st.caption("Turn CB (IP)を増やして下さい（適正値40～55％）")
+            elif rate >= 0.56:
+                st.caption("Turn CB (IP)を減らして下さい（適正値40～55％）")
+
+        # Turn CB OOP
+        if turn_cb_oop_base:
+            rate = turn_cb_oop / turn_cb_oop_base
+            if rate <= 0.29:
+                st.caption("Turn CB (OOP)を増やして下さい（適正値30～45％）")
+            elif rate >= 0.46:
+                st.caption("Turn CB (OOP)を減らして下さい（適正値30～45％）")
+
+        # River CB IP
+        if river_cb_ip_base:
+            rate = river_cb_ip / river_cb_ip_base
+            if rate <= 0.29:
+                st.caption("River CB (IP)を増やして下さい（適正値30～45％）")
+            elif rate >= 0.46:
+                st.caption("River CB (IP)を減らして下さい（適正値30～45％）")
+
+        # River CB OOP
+        if river_cb_oop_base:
+            rate = river_cb_oop / river_cb_oop_base
+            if rate <= 0.19:
+                st.caption("River CB (OOP)を増やして下さい（適正値20～35％）")
+            elif rate >= 0.36:
+                st.caption("River CB (OOP)を減らして下さい（適正値20～35％）")
+
+        # Turn バリュー率
+        if turn_bets:
+            rate = turn_value / len(turn_bets)
+            if rate <= 0.59:
+                st.caption("Turn バリュー率を増やして下さい（適正値60～70％）")
+            elif rate >= 0.71:
+                st.caption("Turn バリュー率を減らして下さい（適正値60～70％）")
+
+        # River バリュー率
+        if river_bets:
+            rate = river_value / len(river_bets)
+            if rate <= 0.64:
+                st.caption("River バリュー率を増やして下さい（適正値65～75％）")
+            elif rate >= 0.76:
+                st.caption("River バリュー率を減らして下さい（適正値65～75％）")
+
+        # フロップチェックレイズ率（OOP）
+        if faced_cb:
+            rate = check_raise / faced_cb
+            if rate <= 0.06:
+                st.caption("フロップチェックレイズ率(OOP)を増やして下さい（適正値7～12％）")
+            elif rate >= 0.13:
+                st.caption("フロップチェックレイズ率(OOP)を減らして下さい（適正値7～12％）")
+
+        # フロップコール→ターンコール/レイズ率
+        if turn_call_raise_after_flop_call_base:
+            rate = turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base
+            if rate <= 0.64:
+                st.caption("ターンコールorレイズを増やして下さい（適正値65～80％）")
+            elif rate >= 0.81:
+                st.caption("ターンコールorレイズを減らして下さい（適正値65～80％）")
+
+        # ターンコール→リバーコール/レイズ率
+        if river_call_raise_after_turn_call_base:
+            rate = river_call_raise_after_turn_call / river_call_raise_after_turn_call_base
+            if rate <= 0.49:
+                st.caption("リバーコールorレイズを増やして下さい（適正値50～70％）")
+            elif rate >= 0.71:
+                st.caption("リバーコールorレイズを減らして下さい（適正値50～70％）")
+
+
+
 # --- Firebase Admin 初期化 ---
 if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
