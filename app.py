@@ -8,6 +8,7 @@ from db import insert_record, fetch_by_uid, db
 from google.cloud import firestore
 from collections import OrderedDict
 
+
 def main_app(uid):
     st.header("ハンド記録")
 
@@ -178,20 +179,20 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- ページ設定（※最初に実行） ---
+# --- 初期化（省略） ---
 st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- ログイン済みならメインアプリへ即移動 ---
+# --- ログイン済みなら即メイン画面 ---
 if "uid" in st.session_state:
     st.title("スタッツ解析アプリ")
-    from main_app import main_app  # 必要ならここで定義せずimport
     main_app(st.session_state["uid"])
-    st.stop()
+    st.stop()  # ✅ 以降のログイン画面は評価されない
 
-# --- Firebase Web 設定（ただし今回は使わない） ---
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
+# --- 認証前：トークン受信やログインUI表示 ---
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
 
-# --- トークンを受け取る（JSでpostMessage→URLへ） ---
+# --- iframe経由でトークン取得（postMessage + URL埋め込み）---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
@@ -206,24 +207,23 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- トークンが URL に来たら検証してログイン扱いにする ---
-token_from_url = st.query_params.get("token")
+# --- トークンがあればFirebaseで検証 ---
 if token_from_url:
     try:
         info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
+        st.success("ログイン成功: " + st.session_state["email"])
         st.query_params.clear()
         st.rerun()
     except Exception as e:
         st.error("認証失敗: " + str(e))
         st.stop()
 
-# --- 認証画面（まだログインしていない場合のみ表示）---
+# --- 未ログイン状態：ログインUIを表示 ---
 st.title("スタッツ解析アプリ")
 components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-# --- 管理者ログイン（Firebase不要）---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 st.subheader("管理者ログイン")
 pw = st.text_input("管理者パスワードを入力", type="password")
@@ -231,9 +231,9 @@ if st.button("管理者ログイン"):
     if pw == ADMIN_PASSWORD:
         st.session_state["uid"] = "admin"
         st.session_state["email"] = "admin@example.com"
+        st.success("管理者ログイン成功")
         st.rerun()
     else:
         st.error("パスワードが違います")
 
-# --- ログインしていないので終了 ---
 st.stop()
