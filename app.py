@@ -7,7 +7,7 @@ from firebase_admin import auth, credentials
 from db import insert_record, fetch_by_uid, db
 from google.cloud import firestore
 from collections import OrderedDict
-
+st.set_page_config(page_title="スタッツ解析", layout="centered")
 
 def main_app(uid):
     st.header("ハンド記録")
@@ -181,7 +181,6 @@ if not firebase_admin._apps:
 
 # --- 最初にログイン済みを判定して分岐 ---
 if "uid" in st.session_state:
-    st.set_page_config(page_title="スタッツ解析", layout="centered")
     st.title("スタッツ解析アプリ")
     main_app(st.session_state["uid"])
     st.stop()
