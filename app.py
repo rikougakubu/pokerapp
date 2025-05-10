@@ -6,7 +6,10 @@ import firebase_admin
 from firebase_admin import auth, credentials
 from db import insert_record, fetch_by_uid, db
 from google.cloud import firestore
+
 from collections import OrderedDict
+
+st.set_page_config(page_title="スタッツ解析", layout="centered")
 
 # --- Firebase Admin 初期化 ---
 if not firebase_admin._apps:
