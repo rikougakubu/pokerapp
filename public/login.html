@@ -4,13 +4,24 @@
   <meta charset="UTF-8">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <meta name="cfg" content='{"apiKey":"AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto","authDomain":"poker-stats-prod.firebaseapp.com","projectId":"poker-stats-prod","storageBucket":"poker-stats-prod.firebasestorage.app","messagingSenderId":"366474801487","appId":"1:366474801487:web:f1611e8a49db791b67953a"}'>
+  <meta name="cfg" content='{
+    "apiKey": "AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto",
+    "authDomain": "poker-stats-prod.firebaseapp.com",
+    "projectId": "poker-stats-prod",
+    "storageBucket": "poker-stats-prod.appspot.com",
+    "messagingSenderId": "366474801487",
+    "appId": "1:366474801487:web:f1611e8a49db791b67953a"
+  }'>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       padding: 14px;
       margin-top: 40px;
+    }
+    h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
     }
     input, button {
       margin: 6px;
@@ -31,6 +42,8 @@
   </style>
 </head>
 <body>
+  <h2>スタッツ解析アプリ</h2>
+
   <button onclick="googleLogin()" style="background:#db4437; font-size: 16px; padding: 12px 20px;">Googleでログイン</button>
 
   <hr style="width:70%">
@@ -57,7 +70,8 @@
       auth.signInWithPopup(provider)
         .then(r => r.user.getIdToken())
         .then(tok => {
-          window.parent.postMessage({ token: tok }, "*");
+          // ✅ トップページ（例: Streamlit）へ遷移＋トークンをURLに付加
+          window.location.href = "/" + "?token=" + encodeURIComponent(tok);
         })
         .catch(e => msg.textContent = e.message);
     }
