@@ -174,26 +174,24 @@ def main_app(uid):
         st.markdown(f"- ターンベット→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
         st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
 
-
-
-# --- st.set_page_config は最初に呼ぶ ---
-st.set_page_config(page_title="スタッツ解析", layout="centered")
-
 # --- Firebase Admin 初期化 ---
 if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- トークン受信（iframe 経由で JS postMessage） ---
+# --- st.set_page_config は最初に呼ぶ ---
+st.set_page_config(page_title="スタッツ解析", layout="centered")
+
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
+# --- トークンを iframe 経由で取得 ---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
     window.addEventListener("message", (e) => {
         if (e.data.token) {
             window.token = e.data.token;
-            const url = new URL(window.location);
-            url.searchParams.set("token", e.data.token);
-            window.location.href = url.toString();  // ✅ トークン付きでリロード
+            window.location.href = window.location.pathname + "?token=" + e.data.token;
         }
     });
     return window.token;
@@ -201,37 +199,41 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- ログイン状態の確認（query param から受け取る） ---
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
-
+# --- トークン検証 ---
 if token_from_url and "uid" not in st.session_state:
     try:
         info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
-        st.query_params.clear()
+        st.success("ログイン成功: " + st.session_state["email"])
+
+        st.query_params.clear()  # トークンをURLから削除して再読み込み
         st.rerun()
     except Exception as e:
         st.error("認証失敗: " + str(e))
 
-# --- 管理者ログイン（Firebase 不要）---
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+# --- 認証されていない場合のみログイン画面を表示 ---
 if "uid" not in st.session_state:
+    st.title("スタッツ解析アプリ")
+
+    # 認証 iframe を表示
+    components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
+
+    # 管理者ログインフォーム
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
     st.subheader("管理者ログイン")
     pw = st.text_input("管理者パスワードを入力", type="password")
     if st.button("管理者ログイン"):
         if pw == ADMIN_PASSWORD:
             st.session_state["uid"] = "admin"
             st.session_state["email"] = "admin@example.com"
+            st.success("管理者ログイン成功")
             st.rerun()
         else:
             st.error("パスワードが違います")
-    # 認証前の要素（ログインUI）を表示
-    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
-    components.iframe(AUTH_UI_URL, height=360)
-    st.stop()
 
-# --- ログイン後メインアプリ実行 ---
-uid = st.session_state["uid"]
-main_app(uid)
+    st.stop()  # ここで完全に中断
+
+# --- ログイン済みユーザーのみここに到達する ---
+st.title("スタッツ解析アプリ")  # ✅ ログイン後に1回だけ表示されるタイトル
+main_app(st.session_state["uid"])
