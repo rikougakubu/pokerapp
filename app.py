@@ -179,15 +179,20 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
+# --- 初期化（省略） ---
 st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- ログイン済みならメインアプリ実行 ---
+# --- ログイン済みなら即メイン画面 ---
 if "uid" in st.session_state:
     st.title("スタッツ解析アプリ")
     main_app(st.session_state["uid"])
-    st.stop()
+    st.stop()  # ✅ 以降のログイン画面は評価されない
 
-# --- トークン取得用 JS (postMessage → URL)
+# --- 認証前：トークン受信やログインUI表示 ---
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
+
+# --- iframe経由でトークン取得（postMessage + URL埋め込み）---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
@@ -202,25 +207,23 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- URL からトークンを取得して検証 ---
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
-
+# --- トークンがあればFirebaseで検証 ---
 if token_from_url:
     try:
         info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
+        st.success("ログイン成功: " + st.session_state["email"])
         st.query_params.clear()
         st.rerun()
     except Exception as e:
         st.error("認証失敗: " + str(e))
         st.stop()
 
-# --- 未ログインなら：ログイン UI 表示 ---
-components.iframe("https://auth-ui-app.onrender.com/", height=360)
+# --- 未ログイン状態：ログインUIを表示 ---
+st.title("スタッツ解析アプリ")
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-# --- 管理者ログインフォーム（Firebaseなし用） ---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 st.subheader("管理者ログイン")
 pw = st.text_input("管理者パスワードを入力", type="password")
@@ -228,6 +231,7 @@ if st.button("管理者ログイン"):
     if pw == ADMIN_PASSWORD:
         st.session_state["uid"] = "admin"
         st.session_state["email"] = "admin@example.com"
+        st.success("管理者ログイン成功")
         st.rerun()
     else:
         st.error("パスワードが違います")
