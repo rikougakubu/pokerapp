@@ -193,37 +193,39 @@ if "uid" not in st.session_state:
     AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
     components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-
-# --- トークン受信 (JS 経由で postMessage) ---
+# --- トークン受信（iframe 経由）
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
-    window.addEventListener("message",(e)=>{
-        if(e.data.token){ window.token = e.data.token; }
+    window.addEventListener("message", (e) => {
+        if (e.data.token) {
+            window.token = e.data.token;
+            window.location.reload();  // ✅ 強制リロードで Python 側へ渡す
+        }
     });
     return window.token;
     """,
     key="token_listener"
 )
 
-# --- Firebaseトークン受信と検証 ---
+# --- トークン検証
 if token and "uid" not in st.session_state:
     try:
         info = auth.verify_id_token(token)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
         st.success("ログイン成功: " + st.session_state["email"])
-        main_app(st.session_state["uid"])  # ✅ ここで明示的に呼ぶ
-        st.stop()
+        st.experimental_rerun()  # 🔁 再評価で main_app() へ
     except Exception as e:
         st.error("認証失敗: " + str(e))
         st.stop()
+
 
 # --- 管理者パスワードによるログイン（Firebase不要）---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 if "uid" not in st.session_state:
     st.subheader("管理者ログイン")
-    pw = st.text_input("管理者パスワードを入力（外部には非公開）", type="password")
+    pw = st.text_input("管理者パスワードを入力", type="password")
     if st.button("管理者ログイン"):
         if pw == ADMIN_PASSWORD:
             st.session_state["uid"] = "admin"
