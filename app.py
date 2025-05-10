@@ -178,19 +178,20 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
+# --- ページ設定（※最初に実行） ---
+st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- 初期化（省略） ---
-                                                                                                      # --- ログイン済みなら即メイン画面 ---
-
+# --- ログイン済みならメインアプリへ即移動 ---
 if "uid" in st.session_state:
-    st.set_page_config(page_title="スタッツ解析", layout="centered")
-    st.title("スタッツ解析アプリ")                                                                        main_app(st.session_state["uid"])
-    st.stop()  # ✅ 以降のログイン画面は評価されない
+    st.title("スタッツ解析アプリ")
+    from main_app import main_app  # 必要ならここで定義せずimport
+    main_app(st.session_state["uid"])
+    st.stop()
 
-# --- Firebase config ---
+# --- Firebase Web 設定（ただし今回は使わない） ---
 web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
 
-# --- トークン受信：postMessage から URL に挿入 ---
+# --- トークンを受け取る（JSでpostMessage→URLへ） ---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
@@ -205,10 +206,8 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- URL の query param から token を受け取る ---
-query_params = st.query_params
-token_from_url = query_params.get("token")
-
+# --- トークンが URL に来たら検証してログイン扱いにする ---
+token_from_url = st.query_params.get("token")
 if token_from_url:
     try:
         info = auth.verify_id_token(token_from_url)
@@ -220,12 +219,11 @@ if token_from_url:
         st.error("認証失敗: " + str(e))
         st.stop()
 
-# --- ログインフォーム表示 ---
+# --- 認証画面（まだログインしていない場合のみ表示）---
 st.title("スタッツ解析アプリ")
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
-
-# --- 管理者ログイン（Firebase不要） ---
+# --- 管理者ログイン（Firebase不要）---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 st.subheader("管理者ログイン")
 pw = st.text_input("管理者パスワードを入力", type="password")
@@ -237,4 +235,5 @@ if st.button("管理者ログイン"):
     else:
         st.error("パスワードが違います")
 
+# --- ログインしていないので終了 ---
 st.stop()
