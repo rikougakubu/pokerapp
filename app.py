@@ -179,62 +179,30 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
     firebase_admin.initialize_app(cred)
 
-# --- Streamlit ページ設定（最初に一度だけ呼ぶ）---
+# ✅ set_page_config は最初に呼ぶ必要あり
 st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- すでにログイン済みの場合はメイン画面を表示 ---
+# ✅ ログイン済みならメイン画面のみ表示して終了
 if "uid" in st.session_state:
     st.title("スタッツ解析アプリ")
     main_app(st.session_state["uid"])
-    st.stop()
+    st.stop()  # ✅ ログインUIはもう表示しない（これが重要）
 
-# --- 未ログイン：トークン受信（postMessage 経由） ---
-token = streamlit_js_eval(
-    js_code="""
-    window.token = window.token || "";
-    window.addEventListener("message", (e) => {
-        if (e.data.token) {
-            window.token = e.data.token;
-            window.location.href = window.location.pathname + "?token=" + e.data.token;
-        }
-    });
-    return window.token;
-    """,
-    key="token_listener"
-)
+# ここから下は「未ログイン状態」の人向けログイン画面だけ
+# --- 認証 UI ---
+st.title("スタッツ解析アプリ")
 
-# --- URLクエリパラメータからトークンを受信して認証 ---
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
+components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
 
-if token_from_url:
-    try:
-        info = auth.verify_id_token(token_from_url)
-        st.session_state["uid"] = info["uid"]
-        st.session_state["email"] = info.get("email", "")
-        st.query_params.clear()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+st.subheader("管理者ログイン")
+pw = st.text_input("管理者パスワードを入力", type="password")
+if st.button("管理者ログイン"):
+    if pw == ADMIN_PASSWORD:
+        st.session_state["uid"] = "admin"
+        st.session_state["email"] = "admin@example.com"
         st.rerun()
-    except Exception as e:
-        st.error("認証失敗: " + str(e))
-        st.stop()
+    else:
+        st.error("パスワードが違います")
 
-# --- ここまででログインできなければ、ログインUIを表示 ---
-if "uid" not in st.session_state:
-    st.title("スタッツ解析アプリ")
-
-    # 🔐 Firebase 認証UI（Google・Email・SMS）
-    components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
-
-    # 🔑 管理者ログイン（バックドア）
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-    st.subheader("管理者ログイン")
-    pw = st.text_input("管理者パスワードを入力", type="password")
-    if st.button("管理者ログイン"):
-        if pw == ADMIN_PASSWORD:
-            st.session_state["uid"] = "admin"
-            st.session_state["email"] = "admin@example.com"
-            st.rerun()
-        else:
-            st.error("パスワードが違います")
-
-    st.stop()
+st.stop()
