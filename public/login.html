@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ログイン - スタッツ解析アプリ</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <meta name="cfg" content='{"apiKey":"AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto","authDomain":"poker-stats-prod.firebaseapp.com","projectId":"poker-stats-prod","storageBucket":"poker-stats-prod.appspot.com","messagingSenderId":"366474801487","appId":"1:366474801487:web:f1611e8a49db791b67953a"}'>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 60px 20px; }
+    h1 { font-size: 1.8em; margin-bottom: 20px; }
+    .btn { font-size: 16px; padding: 10px 20px; border-radius: 6px; cursor: pointer; border: none; }
+    .google { background: #db4437; color: white; margin-bottom: 30px; }
+    .admin-area { margin-top: 40px; }
+    input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>スタッツ解析アプリ ログイン</h1>
+  <button class="btn google" onclick="googleLogin()">Googleでログイン</button>
+
+  <div class="admin-area">
+    <h3>管理者ログイン</h3>
+    <form id="adminForm" onsubmit="adminLogin(); return false;">
+      <input id="admin_pw" type="password" placeholder="管理者パスワードを入力"><br><br>
+      <button class="btn" style="border: 1px solid #555; background: white;">管理者ログイン</button>
+    </form>
+  </div>
+
+  <p id="msg" style="color:#c33;"></p>
+
+  <script>
+    const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
+    firebase.initializeApp(cfg);
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    function googleLogin() {
+      auth.signInWithPopup(provider)
+        .then(r => r.user.getIdToken())
+        .then(tok => window.location.href = "https://pokerapp-l57n.onrender.com/?token=" + encodeURIComponent(tok))
+        .catch(e => msg.textContent = e.message);
+    }
+
+    function adminLogin() {
+      const pw = document.getElementById("admin_pw").value.trim();
+      if (!pw) return msg.textContent = "パスワードを入力してください";
+      const url = "https://pokerapp-l57n.onrender.com/?token=admin:" + encodeURIComponent(pw);
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
