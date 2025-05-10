@@ -6,15 +6,8 @@ import firebase_admin
 from firebase_admin import auth, credentials
 from db import insert_record, fetch_by_uid, db
 from google.cloud import firestore
-
 from collections import OrderedDict
 
-st.set_page_config(page_title="スタッツ解析", layout="centered")
-
-# --- Firebase Admin 初期化 ---
-if not firebase_admin._apps:
-    cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
-    firebase_admin.initialize_app(cred)
 
 def main_app(uid):
     st.header("ハンド記録")
@@ -183,11 +176,15 @@ def main_app(uid):
 
 
 
-# --- URLのクエリパラメータから token を取得（例: https://.../?token=xxx）
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
+# --- st.set_page_config は最初に呼ぶ ---
+st.set_page_config(page_title="スタッツ解析", layout="centered")
 
-# --- JS経由で postMessage を受け取り token を取得 ---
+# --- Firebase Admin 初期化 ---
+if not firebase_admin._apps:
+    cred = credentials.Certificate(json.loads(os.environ["FIREBASE_KEY_JSON"]))
+    firebase_admin.initialize_app(cred)
+
+# --- トークン受信（iframe 経由で JS postMessage） ---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
@@ -196,7 +193,7 @@ token = streamlit_js_eval(
             window.token = e.data.token;
             const url = new URL(window.location);
             url.searchParams.set("token", e.data.token);
-            window.location.href = url.toString();
+            window.location.href = url.toString();  // ✅ トークン付きでリロード
         }
     });
     return window.token;
@@ -204,28 +201,23 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- Tokenを検証してログイン済みにする ---
+# --- ログイン状態の確認（query param から受け取る） ---
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
+
 if token_from_url and "uid" not in st.session_state:
     try:
         info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
-        st.rerun()  # ✅ 認証成功後は rerun してクエリを消す
+        st.query_params.clear()
+        st.rerun()
     except Exception as e:
         st.error("認証失敗: " + str(e))
-        st.stop()
 
-# --- 認証済みでない場合だけ認証UIを表示 ---
+# --- 管理者ログイン（Firebase 不要）---
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 if "uid" not in st.session_state:
-    st.set_page_config(page_title="スタッツ解析", layout="centered")
-    st.title("スタッツ解析アプリ")
-
-    # Firebase 認証UI を iframe 埋め込み
-    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
-    components.iframe(AUTH_UI_URL, height=360)
-
-    # 管理者パスワードによるログイン
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
     st.subheader("管理者ログイン")
     pw = st.text_input("管理者パスワードを入力", type="password")
     if st.button("管理者ログイン"):
@@ -235,9 +227,12 @@ if "uid" not in st.session_state:
             st.rerun()
         else:
             st.error("パスワードが違います")
+    # 認証前の要素（ログインUI）を表示
+    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
+    components.iframe(AUTH_UI_URL, height=360)
+    st.stop()
 
-    st.stop()  # ✅ 認証が完了していない場合はこれ以上進めない
-
-# --- 認証済みならメインアプリを実行 ---
+# --- ログイン後メインアプリ実行 ---
 uid = st.session_state["uid"]
+from main_app import main_app
 main_app(uid)
