@@ -206,16 +206,18 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- Firebase ID トークン検証 ---
+# --- トークンを受信したら即処理 ---
 if token and "uid" not in st.session_state:
     try:
         info = auth.verify_id_token(token)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
         st.success("ログイン成功: " + st.session_state["email"])
-        main_app(st.session_state["uid"])
+        main_app(st.session_state["uid"])  # ✅ ここで即起動
+        st.stop()  # ✅ 必ず止める（でないと2重描画やエラーのもと）
     except Exception as e:
         st.error("認証失敗: " + str(e))
+        st.stop()
 
 # --- 管理者パスワードによるログイン（Firebase不要）---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
