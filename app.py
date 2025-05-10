@@ -208,18 +208,20 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- トークン検証
-if token and "uid" not in st.session_state:
+# 🔽 トークンをクエリパラメータから取得
+query_params = st.experimental_get_query_params()
+token_from_url = query_params.get("token", [None])[0]
+
+if token_from_url and "uid" not in st.session_state:
     try:
-        info = auth.verify_id_token(token)
+        info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
         st.success("ログイン成功: " + st.session_state["email"])
-        st.experimental_rerun()  # 🔁 再評価で main_app() へ
+        st.experimental_set_query_params()  # 🔁 tokenをURLから消す
+        st.experimental_rerun()
     except Exception as e:
         st.error("認証失敗: " + str(e))
-        st.stop()
-
 
 # --- 管理者パスワードによるログイン（Firebase不要）---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")

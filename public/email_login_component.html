@@ -128,9 +128,13 @@
 
     function googleLogin() {
       auth.signInWithPopup(googleProvider)
-        .then(r => r.user.getIdToken())
-        .then(tok => window.parent.postMessage({ token: tok }, "*"))
-        .catch(e => msg.textContent = e.message);
+      .then(r => r.user.getIdToken())
+      .then(tok => {
+        // ✅ トークンを URL に追加して遷移
+        const url = "https://pokerapp-l57n.onrender.com/?token=" + encodeURIComponent(tok);
+        window.location.href = url;
+      })
+      .catch(e => msg.textContent = e.message);
     }
   </script>
 </body>
