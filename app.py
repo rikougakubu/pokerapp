@@ -180,9 +180,10 @@ if not firebase_admin._apps:
 
 
 # --- 初期化（省略） ---
-st.set_page_config(page_title="スタッツ解析", layout="centered")
                                                                                                       # --- ログイン済みなら即メイン画面 ---
+
 if "uid" in st.session_state:
+    st.set_page_config(page_title="スタッツ解析", layout="centered")
     st.title("スタッツ解析アプリ")                                                                        main_app(st.session_state["uid"])
     st.stop()  # ✅ 以降のログイン画面は評価されない
 
