@@ -184,6 +184,12 @@ def main_app(uid):
 st.set_page_config(page_title="スタッツ解析", layout="centered")
 st.title("スタッツ解析アプリ")
 
+
+# --- ログイン状態の確認（query param からも受け取る）
+query_params = st.query_params
+token_from_url = query_params.get("token", None)
+
+
 # --- 認証 UI を iframe で表示 ---
 
 web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
@@ -209,8 +215,6 @@ token = streamlit_js_eval(
 )
 
 # --- トークンを URL から取得して検証 ---
-query_params = st.query_params
-token_from_url = query_params.get("token", None)
 
 if token_from_url and "uid" not in st.session_state:
     try:
