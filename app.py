@@ -180,33 +180,20 @@ def main_app(uid):
 
 
 
-# --- タイトル ---
-st.set_page_config(page_title="スタッツ解析", layout="centered")
-st.title("スタッツ解析アプリ")
-
-
-# --- ログイン状態の確認（query param からも受け取る）
+# --- URLのクエリパラメータから token を取得（例: https://.../?token=xxx）
 query_params = st.query_params
 token_from_url = query_params.get("token", None)
 
-
-# --- 認証 UI を iframe で表示 ---
-
-web_cfg = os.environ["FIREBASE_WEB_CONFIG"]
-
-# --- 認証 UI（ログインしてないときだけ表示）---
-if "uid" not in st.session_state:
-    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
-    components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
-
-# --- トークン受信（iframe 経由）
+# --- JS経由で postMessage を受け取り token を取得 ---
 token = streamlit_js_eval(
     js_code="""
     window.token = window.token || "";
     window.addEventListener("message", (e) => {
         if (e.data.token) {
             window.token = e.data.token;
-            window.location.reload();  // ✅ 強制リロードで Python 側へ渡す
+            const url = new URL(window.location);
+            url.searchParams.set("token", e.data.token);
+            window.location.href = url.toString();
         }
     });
     return window.token;
@@ -214,41 +201,40 @@ token = streamlit_js_eval(
     key="token_listener"
 )
 
-# --- トークンを URL から取得して検証 ---
-
+# --- Tokenを検証してログイン済みにする ---
 if token_from_url and "uid" not in st.session_state:
     try:
         info = auth.verify_id_token(token_from_url)
         st.session_state["uid"] = info["uid"]
         st.session_state["email"] = info.get("email", "")
-        st.success("ログイン成功: " + st.session_state["email"])
-
-        # トークンをURLから削除してリロード
-        st.query_params.clear()
-        st.rerun()
-
+        st.rerun()  # ✅ 認証成功後は rerun してクエリを消す
     except Exception as e:
         st.error("認証失敗: " + str(e))
+        st.stop()
 
-
-# --- 管理者パスワードによるログイン（Firebase不要）---
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+# --- 認証済みでない場合だけ認証UIを表示 ---
 if "uid" not in st.session_state:
+    st.set_page_config(page_title="スタッツ解析", layout="centered")
+    st.title("スタッツ解析アプリ")
+
+    # Firebase 認証UI を iframe 埋め込み
+    AUTH_UI_URL = "https://auth-ui-app.onrender.com/email_login_component.html"
+    components.iframe(AUTH_UI_URL, height=360)
+
+    # 管理者パスワードによるログイン
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
     st.subheader("管理者ログイン")
     pw = st.text_input("管理者パスワードを入力", type="password")
     if st.button("管理者ログイン"):
         if pw == ADMIN_PASSWORD:
             st.session_state["uid"] = "admin"
             st.session_state["email"] = "admin@example.com"
-            st.success("管理者ログイン成功")
+            st.rerun()
         else:
             st.error("パスワードが違います")
-    st.stop()
 
-# --- メインアプリ実行 ---
+    st.stop()  # ✅ 認証が完了していない場合はこれ以上進めない
+
+# --- 認証済みならメインアプリを実行 ---
 uid = st.session_state["uid"]
 main_app(uid)
-
-
-
-
