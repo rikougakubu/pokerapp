@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <meta name="cfg" content='{
+    "apiKey": "AIzaSyC9fbqoFn2aX145bLIsAGPmKnKqaVXszto",
+    "authDomain": "poker-stats-prod.firebaseapp.com",
+    "projectId": "poker-stats-prod",
+    "storageBucket": "poker-stats-prod.appspot.com",
+    "messagingSenderId": "366474801487",
+    "appId": "1:366474801487:web:f1611e8a49db791b67953a"
+  }'>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 14px;
+      margin-top: 40px;
+    }
+    h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+    }
+    input, button {
+      margin: 6px;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    button {
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    #msg {
+      color: #d33;
+      font-size: 0.9em;
+      height: 1.2em;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h2>スタッツ解析アプリ</h2>
+
+  <button onclick="googleLogin()" style="background:#db4437; font-size: 16px; padding: 12px 20px;">Googleでログイン</button>
+
+  <hr style="width:70%">
+
+  <h3>管理者ログイン</h3>
+  <input id="admin_pass" type="password" placeholder="管理者パスワードを入力">
+  <button onclick="adminLogin()" style="background:#555">管理者ログイン</button>
+
+  <p id="msg"></p>
+
+  <script>
+    let auth;
+    try {
+      const cfg = JSON.parse(document.querySelector("meta[name=cfg]").content);
+      firebase.initializeApp(cfg);
+      auth = firebase.auth();
+    } catch (e) {
+      document.getElementById("msg").textContent = "⚠ Firebase 初期化失敗";
+      console.error(e);
+    }
+
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(r => r.user.getIdToken())
+        .then(tok => {
+          // ✅ トップページ（例: Streamlit）へ遷移＋トークンをURLに付加
+          window.location.href = "/" + "?token=" + encodeURIComponent(tok);
+        })
+        .catch(e => msg.textContent = e.message);
+    }
+
+    function adminLogin() {
+      const pass = document.getElementById("admin_pass").value;
+      if (!pass) return msg.textContent = "パスワードを入力してください";
+      window.parent.postMessage({ admin_pass: pass }, "*");
+    }
+  </script>
+</body>
+</html>

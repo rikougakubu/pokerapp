@@ -218,7 +218,7 @@ if token_from_url:
         st.stop()
 
 # --- 未ログインなら：ログイン UI 表示 ---
-components.iframe("https://auth-ui-app.onrender.com/email_login_component.html", height=360)
+components.iframe("https://auth-ui-app.onrender.com/", height=360)
 
 # --- 管理者ログインフォーム（Firebaseなし用） ---
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
