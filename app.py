@@ -268,21 +268,36 @@ def main_app(uid):
                 st.caption("フロップチェックレイズ率(OOP)を減らして下さい（適正値7～12％）")
 
         # フロップコール→ターンコール/レイズ率
-        if turn_call_raise_after_flop_call_base:
-            rate = turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base
-            if rate <= 0.64:
-                st.caption("ターンコールorレイズを増やして下さい（適正値65～80％）")
-            elif rate >= 0.81:
-                st.caption("ターンコールorレイズを減らして下さい（適正値65～80％）")
+        #if turn_call_raise_after_flop_call_base:
+            #rate = turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base
+            #if rate <= 0.64:
+                #st.caption("ターンコールorレイズを増やして下さい（適正値65～80％）")
+            #elif rate >= 0.81:
+                #st.caption("ターンコールorレイズを減らして下さい（適正値65～80％）")
 
         # ターンコール→リバーコール/レイズ率
-        if river_call_raise_after_turn_call_base:
-            rate = river_call_raise_after_turn_call / river_call_raise_after_turn_call_base
-            if rate <= 0.49:
-                st.caption("リバーコールorレイズを増やして下さい（適正値50～70％）")
-            elif rate >= 0.71:
-                st.caption("リバーコールorレイズを減らして下さい（適正値50～70％）")
+        #if river_call_raise_after_turn_call_base:
+            #rate = river_call_raise_after_turn_call / river_call_raise_after_turn_call_base
+            #if rate <= 0.49:
+                #st.caption("リバーコールorレイズを増やして下さい（適正値50～70％）")
+            #elif rate >= 0.71:
+                #st.caption("リバーコールorレイズを減らして下さい（適正値50～70％）")
 
+        # Fold to Turn CB 評価
+        if fold_to_turn_cb_base := (fold_to_turn_cb + sum(1 for r in records if not r.get("last_raiser") and r.get("turn") in ["コール", "レイズ"])):
+            rate = fold_to_turn_cb / fold_to_turn_cb_base
+            if rate <= 0.39:
+                st.caption("Fold to Turn CBを増やして下さい（適正値40～55％）")
+            elif rate >= 0.56:
+                st.caption("Fold to Turn CBを減らして下さい（適正値40～55％）")
+
+        # Fold to River CB 評価
+        if fold_to_river_cb_base := (fold_to_river_cb + sum(1 for r in records if not r.get("last_raiser") and r.get("river") in ["コール", "レイズ"])):
+            rate = fold_to_river_cb / fold_to_river_cb_base
+            if rate <= 0.44:
+                st.caption("Fold to river CBを増やして下さい（適正値45～60％）")
+            elif rate >= 0.61:
+                st.caption("Fold to river CBを減らして下さい（適正値45～60％）")
 
 
 # --- Firebase Admin 初期化 ---
