@@ -103,7 +103,7 @@ def main_app(uid):
     # -------------------
     # スタッツ解析
     # -------------------
-    st.subheader(f"『{selected_game}』の統計")
+    st.subheader(f"『{view_game}』の統計")
 
     total = len(records)
     vpip = sum(1 for r in records if r.get("preflop") not in ["フォールド", ""])
