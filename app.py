@@ -148,14 +148,14 @@ def main_app(uid):
     check_raise = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") == "レイズ")
     faced_cb = sum(1 for r in records if r.get("position") == "OOP" and r.get("flop") in ["チェック", "コール", "レイズ", "フォールド"])
 
-    turn_bet_after_flop_call_base = sum(1 for r in records if r.get("flop") == "ベット" and r.get("turn") in ["チェック", "フォールド", "ベット", "3bet"])
-    turn_bet_after_flop_call = sum(1 for r in records if r.get("flop") == "ベット" and r.get("turn") in ["ベット", "3bet"])
+    turn_bet_after_flop_call_base = sum(1 for r in records if r.get("flop") in ["ベット", "3bet"] and r.get("turn") in ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+    turn_bet_after_flop_call = sum(1 for r in records if r.get("flop") in ["ベット", "3bet"] and r.get("turn") in ["ベット", "3bet"])
 
     turn_call_raise_after_flop_call_base = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ", "フォールド"])
     turn_call_raise_after_flop_call = sum(1 for r in records if r.get("flop") == "コール" and r.get("turn") in ["コール", "レイズ"])
 
-    river_bet_after_turn_call_base = sum(1 for r in records if r.get("turn") == "ベット" and r.get("river") in ["チェック", "フォールド", "ベット", "3bet"])
-    river_bet_after_turn_call = sum(1 for r in records if r.get("turn") == "ベット" and r.get("river") in ["ベット", "3bet"])
+    river_bet_after_turn_call_base = sum(1 for r in records if r.get("turn") in ["ベット", "3bet"] and r.get("river") in ["ベット", "チェック", "レイズ", "3bet", "フォールド", "コール"])
+    river_bet_after_turn_call = sum(1 for r in records if r.get("turn") in ["ベット", "3bet"] and r.get("river") in ["ベット", "3bet"])
 
     river_call_raise_after_turn_call_base = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["コール", "レイズ", "フォールド"])
     river_call_raise_after_turn_call = sum(1 for r in records if r.get("turn") == "コール" and r.get("river") in ["コール", "レイズ"])
@@ -177,10 +177,10 @@ def main_app(uid):
         st.markdown(f"- Turn バリュー率: {turn_value / len(turn_bets):.1%} ({turn_value}/{len(turn_bets)})" if turn_bets else "- Turn バリュー率: なし")
         st.markdown(f"- River バリュー率: {river_value / len(river_bets):.1%} ({river_value}/{len(river_bets)})" if river_bets else "- River バリュー率: なし")
         st.markdown(f"- フロップチェックレイズ率（OOP）: {check_raise / faced_cb:.1%} ({check_raise}/{faced_cb})" if faced_cb else "- フロップチェックレイズ率（OOP）: なし")
-        st.markdown(f"- フロップベット→ターンCB率: {turn_bet_after_flop_call / turn_bet_after_flop_call_base:.1%} ({turn_bet_after_flop_call}/{turn_bet_after_flop_call_base})" if turn_bet_after_flop_call_base else "- フロップコール→ターンCB率: なし")
-        st.markdown(f"- フロップコール→ターンコール/レイズ率: {turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base:.1%} ({turn_call_raise_after_flop_call}/{turn_call_raise_after_flop_call_base})" if turn_call_raise_after_flop_call_base else "- フロップコール→ターンコール/レイズ率: なし")
-        st.markdown(f"- ターンベット→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
-        st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
+        #st.markdown(f"- フロップベット→ターンCB率: {turn_bet_after_flop_call / turn_bet_after_flop_call_base:.1%} ({turn_bet_after_flop_call}/{turn_bet_after_flop_call_base})" if turn_bet_after_flop_call_base else "- フロップコール→ターンCB率: なし")
+        #st.markdown(f"- フロップコール→ターンコール/レイズ率: {turn_call_raise_after_flop_call / turn_call_raise_after_flop_call_base:.1%} ({turn_call_raise_after_flop_call}/{turn_call_raise_after_flop_call_base})" if turn_call_raise_after_flop_call_base else "- フロップコール→ターンコール/レイズ率: なし")
+        #st.markdown(f"- ターンベット→リバーCB率: {river_bet_after_turn_call / river_bet_after_turn_call_base:.1%} ({river_bet_after_turn_call}/{river_bet_after_turn_call_base})" if river_bet_after_turn_call_base else "- ターンコール→リバーCB率: なし")
+        #st.markdown(f"- ターンコール→リバーコール/レイズ率: {river_call_raise_after_turn_call / river_call_raise_after_turn_call_base:.1%} ({river_call_raise_after_turn_call}/{river_call_raise_after_turn_call_base})" if river_call_raise_after_turn_call_base else "- ターンコール→リバーコール/レイズ率: なし")
 
 
         # PFR
